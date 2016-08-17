@@ -1,11 +1,11 @@
-# coding: utf-8
+ # coding: utf-8
 # __author__: u"John"
 from __future__ import with_statement
 from os import path
 import re
 
 
-# region 属性访问定义
+# region 属性访问定义——字典后接'.' + key名，即可得到字典中key对应的内容
 class AttributeDict(dict):
     """
     能够把dict的key当作class的attribute
@@ -18,7 +18,7 @@ class AttributeDict(dict):
 # endregion
 
 
-# region 可复用基本类
+# region 可复用基本类 可以得到文件名，文件拓展，还有一个加序号的方法
 class BaseReducer(object):
     """
     变量初始化设定是可以复用的代码
@@ -50,6 +50,7 @@ class BaseReducer(object):
     @staticmethod
     def get_file_extension(file_path):
         return path.splitext(file_path)[1][1:]
+        # splitext分离拓展名
 
     @staticmethod
     def get_file_name(file_path):
@@ -76,7 +77,11 @@ class KeywordsReducer(BaseReducer):
     """
     def __init__(self):
         BaseReducer.__init__(self)
-        self.one_hit_strategy = True
+        self.one_hit_strategy = False
+        self.usehottags = True
+        self.hottags = []
+        self.safewords_list = []
+        self.current_safedict_abspath = ''
 
     def get_contents(self):
         """
@@ -94,6 +99,7 @@ class KeywordsReducer(BaseReducer):
             if self.file_extension == u"txt":
                 try:
                     f = open(self.current_data_abspath, u"rb")
+                    # 2进制模式打开
                 except IOError as e:
                     self.current_error = str(e)
                     self.code_message.code = 1
@@ -102,12 +108,77 @@ class KeywordsReducer(BaseReducer):
                 else:
                     with f:
                         for line in f:
+                            # line = line.encode(u"gb2312").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
                         self.code_message.message = u"data file import successfully"
         else:
             self.raw_list = [(1, u"关键词"), (2, u"这是一个正"), (3, u"这是一个藏得很深的水贴，你检测不出来"),
                              (4, u"则表达式呢")]
+        return
+
+    def get_hottags(self):
+        if self.hottags:
+            return
+        else:
+            pass
+        if self.raw_list:
+            cont = [i[self.data_column_index] for i in self.raw_list]
+            wordcut = r'\n'.join(cont)
+            wordcuts = wordcut.split(r'\n')
+
+            result = []
+            for i in wordcuts:
+                try:
+                    seg_list = re.findall('#.*?#', i)
+                    for j in seg_list:
+                        if len(j) >= 3:
+                            result.append(j.strip('#'))
+                except:
+                    print("some wrong")
+
+            dic_result = {}
+            for i in result:
+                if i in dic_result:
+                    dd = dic_result.get(i)
+                    dic_result[i] = dd + 1
+                else:
+                    dic_result[i] = 1
+            dic_result = sorted(dic_result.items(), key=lambda asd: asd[1], reverse=True)
+            #dic_data = DataFrame(dic_result, columns=['keyword', 'frequency'])
+
+            self.hottags = [i[0] for i in dic_result[:8]]
+            # print [i[1] for i in dic_result[:20]]
+            # for i in self.hottags:
+            #     print i
+            # print len(self.hottags)
+
+    def get_safewords(self):
+        """
+            数据库的操作后将数据赋值给 self.safewords_list
+            :return:
+            """
+        if self.safewords_list:
+            return
+        else:
+            pass
+        if self.current_safedict_abspath:
+            self.export_name = u"{0}-{1}".format(self.export_name, self.get_file_name(self.current_dict_abspath))
+            try:
+                f = open(self.current_safedict_abspath, u"rb")
+            except IOError as e:
+                self.current_error = str(e)
+                self.code_message.code = 1
+                self.code_message.message = u"get_safewords open(file) IOError"
+                self.error_list.append(self.current_error)
+            else:
+                with f:
+                    # self.safewords_list += f.read().decode(u"gb2312").split(u"\r\n")
+                    self.safewords_list += f.read().decode(u"utf-8").split(u"\r\n")
+                    self.code_message.message = u"cleanwords dictionary import successfully"
+        else:
+            self.safewords_list = [u"非关键词", u"奥运"]
+
         return
 
     def get_keywords(self):
@@ -130,11 +201,33 @@ class KeywordsReducer(BaseReducer):
                 self.error_list.append(self.current_error)
             else:
                 with f:
+                    # self.keywords_list += f.read().decode(u"gb2312").split(u"\r\n")
                     self.keywords_list += f.read().decode(u"utf-8").split(u"\r\n")
                     self.code_message.message = u"keywords dictionary import successfully"
         else:
             self.keywords_list = [u"关键词", u"(正|则|表|达|式)"]
+
         return
+
+    def keyword_merge(self):
+        rawkeywords = self.hottags + self.keywords_list
+        newkeywords = []
+        if self.current_safedict_abspath:
+            for i in rawkeywords:
+                contain = False
+                for j in self.safewords_list:
+                    if j in i and j:
+                        contain = True
+                    else:
+                        continue
+                if contain:
+                    pass
+                else:
+                    newkeywords.append(i)
+
+            self.keywords_list = newkeywords
+        else:
+            self.keywords_list = rawkeywords
 
     def keywords_finder(self):
         """
@@ -169,11 +262,18 @@ class KeywordsReducer(BaseReducer):
         :return:
         """
         self.get_contents()
+        if self.usehottags:
+            self.get_hottags()
+        self.get_safewords()
         self.get_keywords()
+        self.keyword_merge()
+        countlist = [0]*len(self.keywords_list)
         for string in self.raw_list:
             self.current_string = string[self.data_column_index]
             hit = False
-            for keywords in self.keywords_list:
+            # for keywords in self.keywords_list:
+            for i in range(0,len(self.keywords_list)):
+                keywords = self.keywords_list[i]
                 self.current_keywords = keywords
                 self.keywords_finder()
                 if self.current_result:
@@ -181,6 +281,7 @@ class KeywordsReducer(BaseReducer):
                     self.trash_list.append(hit_info)
                     self.result_list.append(self.current_result)
                     hit = True
+                    countlist[i] +=1
                     if self.one_hit_strategy:
                         break
                     else:
@@ -191,6 +292,206 @@ class KeywordsReducer(BaseReducer):
                 continue
             else:
                 self.cleaned_list.append(string)
+
+        totallength = float(len(self.raw_list))
+        tagscount = 0
+        keywordcount = 0
+        for i in countlist[:8]:
+            tagscount += i
+        for i in countlist[8:]:
+            keywordcount += i
+        print u'前八個tags標記微博數量為 ' + str(tagscount) + u' 占' + str(tagscount/totallength*100) + '%'
+        print u'關鍵詞標記微博數量為 ' + str(keywordcount) + u' 占' + str(keywordcount / totallength * 100) + '%'
+        print u"{0}以下是前八個tags標記的水贴{0}".format(u"-" * 30)
+        for i in range(0, 8):
+            # if countlist[i]/totallength*100 < 1:
+            print u'tag "' + self.keywords_list[i] + u'" 匹配的微博数量为 ' \
+                  + str(countlist[i]) + u'  占' + str(countlist[i] / totallength * 100) + '%'
+        print u"{0}以下是關鍵詞標記的水贴{0}".format(u"-" * 30)
+        for i in range(8,len(countlist)):
+            # if countlist[i]/totallength*100 < 1:
+            print u'关键词 "' + self.keywords_list[i] + u'" 匹配的微博数量为 ' \
+                  + str(countlist[i]) + u'  占' + str(countlist[i]/totallength*100) + '%'
+        # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
+        # self.raw_list = None
+        # self.keywords_list = None
+        return
+# endregion
+
+
+# region 数字个数去水
+class NumbersReducer(BaseReducer):
+    """
+    利用数字个数去水的工具，数字暂定为3
+    """
+    def __init__(self):
+        BaseReducer.__init__(self)
+        self.numbers = 3
+
+    def get_contents(self):
+        """
+        可以通过外部赋值设置值，也可以通过别的方法实现
+        数据库的操作后将数据赋值给 self.raw_list
+        :return:
+        """
+        if self.raw_list:
+            return
+        else:
+            pass
+        if self.current_data_abspath:
+            self.file_extension = self.get_file_extension(self.current_data_abspath)
+            self.export_name = self.get_file_name(self.current_data_abspath)
+            if self.file_extension == u"txt":
+                try:
+                    f = open(self.current_data_abspath, u"rb")
+                    # 2进制模式打开
+                except IOError as e:
+                    self.current_error = str(e)
+                    self.code_message.code = 1
+                    self.code_message.message = u"get_contents open(file) IOError"
+                    self.error_list.append(self.current_error)
+                else:
+                    with f:
+                        for line in f:
+                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
+                            self.raw_list.append(tuple(line))
+                        self.code_message.message = u"data file import successfully"
+        else:
+            self.raw_list = [(1, u"关键词1"), (2, u"1这是一个正2"), (3, u"这2是一个藏得很深的2水贴，你检测不3出来"),
+                             (4, u"1则4表达2式6呢")]
+        return
+
+    def number_finder(self):
+        """
+            python的正则表达式可以直接支持中文
+            :return:
+            """
+        try:
+            numbers = re.findall(r"\d+\.?\d*", self.current_string)
+        except Exception as e:
+            self.current_error = str(e)
+            self.code_message.code = 3
+            self.code_message.message = u"number_finder re.findll error"
+            self.error_list.append(self.current_error)
+            self.current_result = []
+        else:
+            self.current_result = len(numbers) == self.numbers
+        if self.show_process:
+            if self.current_result == self.numbers:
+                print u"含有的数字个数\n{0}".format(len(numbers))
+            else:
+                # print u"没有匹配\n{0}".format(self.numbers)
+                pass
+        else:
+            pass
+        return
+
+    def main(self):
+        """
+        复杂应用才需要Override这部分
+        :return:
+        """
+        self.get_contents()
+        for string in self.raw_list:
+            self.current_string = string[self.data_column_index]
+
+            self.number_finder()
+            if self.current_result:
+                self.trash_list.append(self.current_string)
+
+            else:
+                self.cleaned_list.append(self.current_string)
+
+        # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
+        # self.raw_list = None
+        # self.keywords_list = None
+        return
+# endregion
+
+
+# region 非正常字符个数去水
+class AbnormalReducer(BaseReducer):
+    """
+    利用数字个数去水的工具，数字暂定为3
+    """
+    def __init__(self):
+        BaseReducer.__init__(self)
+        self.abnormal = 3
+
+    def get_contents(self):
+        """
+        可以通过外部赋值设置值，也可以通过别的方法实现
+        数据库的操作后将数据赋值给 self.raw_list
+        :return:
+        """
+        if self.raw_list:
+            return
+        else:
+            pass
+        if self.current_data_abspath:
+            self.file_extension = self.get_file_extension(self.current_data_abspath)
+            self.export_name = self.get_file_name(self.current_data_abspath)
+            if self.file_extension == u"txt":
+                try:
+                    f = open(self.current_data_abspath, u"rb")
+                    # 2进制模式打开
+                except IOError as e:
+                    self.current_error = str(e)
+                    self.code_message.code = 1
+                    self.code_message.message = u"get_contents open(file) IOError"
+                    self.error_list.append(self.current_error)
+                else:
+                    with f:
+                        for line in f:
+                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
+                            self.raw_list.append(tuple(line))
+                        self.code_message.message = u"data file import successfully"
+        else:
+            self.raw_list = [(1, u"关键%词1"), (2, u"1这是%一%个正2"), (3, u"这2%是一个藏得很深%的2水贴，你检测%不3出来"),
+                             (4, u"1%则%4表达%2式6%呢")]
+        return
+
+    def number_finder(self):
+        """
+            python的正则表达式可以直接支持中文
+            :return:
+            """
+        try:
+            matchs = re.findall(ur"[^\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
+        except Exception as e:
+            self.current_error = str(e)
+            self.code_message.code = 3
+            self.code_message.message = u"number_finder re.findll error"
+            self.error_list.append(self.current_error)
+            self.current_result = []
+        else:
+            self.current_result = len(matchs) >= self.abnormal
+        if self.show_process:
+            if self.current_result == self.abnormal:
+                print u"含有的数字个数\n{0}".format(len(matchs))
+            else:
+                # print u"没有匹配\n{0}".format(self.abnormal)
+                pass
+        else:
+            pass
+        return
+
+    def main(self):
+        """
+        复杂应用才需要Override这部分
+        :return:
+        """
+        self.get_contents()
+        for string in self.raw_list:
+            self.current_string = string[self.data_column_index]
+
+            self.number_finder()
+            if self.current_result:
+                self.trash_list.append(self.current_string)
+
+            else:
+                self.cleaned_list.append(self.current_string)
+
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
         # self.keywords_list = None
@@ -199,26 +500,24 @@ class KeywordsReducer(BaseReducer):
 
 
 if __name__ == u"__main__":
+
+    # kr = AbnormalReducer()
+    # kr = NumbersReducer()
     kr = KeywordsReducer()
-    kr.data_column_index = 1
-    # kr.show_process = True
-    kr.one_hit_strategy = False
-    # kr.current_dict_abspath = u"爱乐维-通用去水词.txt"
+    kr.data_column_index = 2
+    kr.show_process = False
+    # kr.num_match_strategy = False
+    # kr.current_data_abspath = ur"D:\364\weibo75.txt"
+    # kr.current_data_abspath = ur"D:\weibotop20.txt"
+    kr.current_data_abspath = ur"D:\WorkSpace\Data\weibotest.txt"
+    kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
+    kr.current_safedict_abspath = ur"D:\WorkSpace\Data\safewords.txt"
     try:
         kr.main()
     except Exception as exc:
         print str(exc)
-    print u"{0}以下是水贴{0}".format(u"-" * 30)
-    for row in kr.trash_list:
-        print u"<ID>:{0}, <内容>:{1}, <关键词>:{2}".format(row[0], row[1], row[2])
-    print u"{0}以下是保留贴{0}".format(u"-" * 30)
-    for row in kr.cleaned_list:
-        print u"<ID>:{0}, <内容>:{1}".format(row[0], row[1])
-    _file_name = u"/root/home/你好牛逼...啊.txt"
-    print u"{0}这是一条分割线{0}".format(u"-" * 30)
-    print u"<{0}>的扩展名是<{1}>".format(_file_name, BaseReducer.get_file_extension(_file_name))
-    print u"<{0}>的文件名是<{1}>".format(_file_name, BaseReducer.get_file_name(_file_name))
 
-
-
-
+    print u'共有微博 ' +str(len(kr.raw_list))
+    print u'水有 ' + str(len(kr.raw_list)-len(kr.cleaned_list)) + u'条'
+    print u'重复水有 ' + str(len(kr.trash_list)-len(kr.raw_list)+len(kr.cleaned_list)) + u'条'
+    print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
