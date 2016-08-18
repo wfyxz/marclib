@@ -4,7 +4,6 @@ from __future__ import with_statement
 from os import path
 import re
 
-
 # region 属性访问定义——字典后接'.' + key名，即可得到字典中key对应的内容
 class AttributeDict(dict):
     """
@@ -322,11 +321,11 @@ class KeywordsReducer(BaseReducer):
 # region 数字个数去水
 class NumbersReducer(BaseReducer):
     """
-    利用数字个数去水的工具，数字暂定为3
+    利用数字个数去水的工具，数字暂定为34
     """
     def __init__(self):
         BaseReducer.__init__(self)
-        self.numbers = 3
+        self.numbers = 34
 
     def get_contents(self):
         """
@@ -375,7 +374,10 @@ class NumbersReducer(BaseReducer):
             self.error_list.append(self.current_error)
             self.current_result = []
         else:
-            self.current_result = len(numbers) == self.numbers
+            numbercounts = ''
+            for i in numbers:
+                numbercounts += i
+            self.current_result = len(numbercounts) >= self.numbers
         if self.show_process:
             if self.current_result == self.numbers:
                 print u"含有的数字个数\n{0}".format(len(numbers))
@@ -397,10 +399,10 @@ class NumbersReducer(BaseReducer):
 
             self.number_finder()
             if self.current_result:
-                self.trash_list.append(self.current_string)
+                self.trash_list.append(string)
 
             else:
-                self.cleaned_list.append(self.current_string)
+                self.cleaned_list.append(string)
 
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
@@ -412,11 +414,11 @@ class NumbersReducer(BaseReducer):
 # region 非正常字符个数去水
 class AbnormalReducer(BaseReducer):
     """
-    利用数字个数去水的工具，数字暂定为3
+    利用异常字符种数去水的工具，数字暂定为5
     """
     def __init__(self):
         BaseReducer.__init__(self)
-        self.abnormal = 3
+        self.abnormal = 5
 
     def get_contents(self):
         """
@@ -457,7 +459,7 @@ class AbnormalReducer(BaseReducer):
             :return:
             """
         try:
-            matchs = re.findall(ur"[^\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
+            matchs = re.findall(ur"[^ ,，.\[\]()（）\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
         except Exception as e:
             self.current_error = str(e)
             self.code_message.code = 3
@@ -465,7 +467,11 @@ class AbnormalReducer(BaseReducer):
             self.error_list.append(self.current_error)
             self.current_result = []
         else:
-            self.current_result = len(matchs) >= self.abnormal
+            numbercounts = ''
+            for i in matchs:
+                numbercounts += i
+            numbercounts = set(numbercounts)
+            self.current_result = len(numbercounts) >= self.abnormal
         if self.show_process:
             if self.current_result == self.abnormal:
                 print u"含有的数字个数\n{0}".format(len(matchs))
@@ -487,10 +493,10 @@ class AbnormalReducer(BaseReducer):
 
             self.number_finder()
             if self.current_result:
-                self.trash_list.append(self.current_string)
+                self.trash_list.append(string)
 
             else:
-                self.cleaned_list.append(self.current_string)
+                self.cleaned_list.append(string)
 
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
@@ -502,14 +508,15 @@ class AbnormalReducer(BaseReducer):
 if __name__ == u"__main__":
 
     # kr = AbnormalReducer()
-    # kr = NumbersReducer()
-    kr = KeywordsReducer()
+    kr = NumbersReducer()
+    # kr = KeywordsReducer()
+    kr.numbers = 34
     kr.data_column_index = 2
     kr.show_process = False
     # kr.num_match_strategy = False
     # kr.current_data_abspath = ur"D:\364\weibo75.txt"
     # kr.current_data_abspath = ur"D:\weibotop20.txt"
-    kr.current_data_abspath = ur"D:\WorkSpace\Data\weibotest.txt"
+    kr.current_data_abspath = ur"D:\WorkSpace\Data\weibo1.txt"
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
     kr.current_safedict_abspath = ur"D:\WorkSpace\Data\safewords.txt"
     try:
@@ -517,7 +524,49 @@ if __name__ == u"__main__":
     except Exception as exc:
         print str(exc)
 
+    print u"{0}统计信息{0}".format(u"-" * 30)
     print u'共有微博 ' +str(len(kr.raw_list))
     print u'水有 ' + str(len(kr.raw_list)-len(kr.cleaned_list)) + u'条'
     print u'重复水有 ' + str(len(kr.trash_list)-len(kr.raw_list)+len(kr.cleaned_list)) + u'条'
     print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
+
+
+    content = [
+        u'\u8fd1UA\uff0c\u5ba2\u5385350\u5200/\u6708+\u7f51\u8d39\u5e73\u5206\uff0810.5\u5200\uff09\uff0c9\u6708\u62db\u957f\u79df\u5973\u5ba4\u53cb\uff0c\u5730\u5740\uff1a115 st & 76 ave\uff0c2\u5206\u949f\u5230mckernan station\uff0clrt\u57504\u5206\u949f\u5230university station,\u5ba4\u53cb\u5168\u5973\u751f\uff0c\u95e8\u53e3\u5404\u79cd\u516c\u4ea4\u8f66\u901aUA\u53ca\u8d85\u5e02\uff0c\u6709\u5174\u8da3\u7684\u8bf7\u79c1\u4fe1\u6216\u7535\u8bdd:7807102029\uff0c\u8c22\u8c22\u7231\u57ce\u4e3b\u9875\u541b@\u7231\u57ce\u5fae\u535a-\u5e2e\u5e2e\u5fd9 [\u7231\u4f60]',
+        u'Day1 \u4e00\u4e00 5\uff1a30\u6765\u5230\u706f\u706b\u901a\u660e\u7684\u5723\u5730 1. 2.4\u516c\u91cc\u70ed\u8eab\uff08\u51d1\u5230240\uff0f500\uff1b2. 1\u8282Grit Cardio \u7b2c\u4e00\u6b21\u4f53\u9a8c\uff1b3.1\u8282CX \u63d0\u524d\u611f\u53d7\u83b1\u7f8efilm\u5185\u5bb9\uff1b4.50\u5206\u949f\u529b\u91cf\u8bad\u7ec3 \u5728\u4f17\u591a\u5f6a\u608d\u7684\u8001\u5916\u805a\u96c6\u5730\u64b8\u94c1 \u8001\u523a\u6fc0\u4e86\u2026\u2026\u4e0a\u5348\u7ed3\u675f[\u594b\u6597] \u671f\u5f85\u4e0b\u5348\u7684BC \u7edd\u5bf9\u4f1a\u7528\u5fc3\u611f\u53d7[\u9f13\u638c]',
+        u'I just ran 10.05KM with @\u60a6\u8dd1\u5708, within:01:06:03.http://wap.thejoyrun.com/po_2077579_65248952.html',
+        u'\u65b0\u57fa\u5730\u8981\u7ed9\u5b69\u5b50\u4eec\u62c9\u8dd1\u5708\uff0c\u8c01\u6709\u8d44\u6e90\u53ef\u4ee5\u5b9a\u505a\u8dd1\u5708\u56f4\u680f\uff0c\u4ef7\u683c\u4fbf\u5b9c\u4e9b\u7684\uff0c\u5c3a\u5bf8\u9700\u89811.8\u7c73*2\u7c73\uff0c\u5927\u6982\u9700\u8981120-130\u7247\u5de6\u53f3\uff0c\u6700\u597d\u5305\u5b89\u88c5\u3002\u6574\u6574\u6253\u4e86\u4e00\u5929\u7535\u8bdd\u627e\u4e86\u65e0\u6570\u5bb6\u5b9a\u505a\u56f4\u680f\u7684\uff0c\u603b\u4ef7\u90fd\u5728\u4e24\u4e07\u4ee5\u4e0a\uff0c\u5b9e\u5728\u592a\u8d35\uff0c\u81ea\u5df1\u505a\u5b9e\u5728\u662f\u5e72\u4e0d\u52a8\u4e86\u3002\u8bf7\u5927\u5bb6\u5e2e\u5fd9\u3002\u611f\u8c22\u3002\u5fae\u4fe1\uff1a413268154\u3002\u7535\u8bdd\uff1a13501105906',
+        u'10701070107010701070107010701070\u6211\u4e70\u4e86[\u5fae\u7b11]\u4efb\u6027[\u5fae\u7b11]\u4e0d\u6015\u6b7b[\u5fae\u7b11]',
+        u'\u6652\u4e2a\u7709\u6bdb\u65bd\u672f\u540e\u7acb\u5373\u56fe \u4e0b\u5348\u4e0d\u73a9\u624b\u673a\u4e86 \u9888\u690e\u4e0d\u8212\u670d \u5982\u679c\u7d27\u6025\u4e8b\u60c5\u6253\u6211\u7535\u8bdd13023961110/18060287080/17750695051']
+
+    B = 0
+    for i in kr.trash_list:
+        if i[kr.data_column_index] in content:
+            B += 1
+            #print i[kr.data_column_index]
+
+    A = 0
+    for i in kr.cleaned_list:
+        if i[kr.data_column_index] in content:
+            A += 1
+
+    D = len(kr.raw_list)-len(kr.cleaned_list) - B
+    C = len(kr.cleaned_list) - A
+    if A+B != 0:
+        precise = A/float(A+B)*100
+    else:
+        precise = 0
+    if A+C != 0:
+        recall = A/float(A+C)*100
+    else:
+        recall = 0
+    if precise + recall != 0:
+        F = precise * recall / (precise + recall)
+    else:
+        F = 0
+    print 'AB is:      ' + str(A) + ' ' + str(B)
+    print 'CD is:      ' + str(C) + ' ' + str(D)
+    print 'precise is: ' + str(precise) + '%'
+    print 'recall is:  ' + str(recall) + '%'
+    print '100*F is        ' + str(F)
+

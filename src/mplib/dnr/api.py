@@ -16,9 +16,12 @@ def keywords_splitter(data_path, keywords_path, safewords_path='', index=2, one_
         # pickle_dump(file_name=u"trash_list", dump_object=keywords_reducer.trash_list)
         # pickle_dump(file_name=u"cleaned_list", dump_object=keywords_reducer.cleaned_list)
         if keywords_reducer.trash_list:
-            export_to_excel(data_list=keywords_reducer.trash_list,
-                             file_name=u"data_trash.xlsx",
-                             column_head=None)
+            # export_to_excel(data_list=keywords_reducer.trash_list,
+            #                  file_name=u"data_trash.xlsx",
+            #                  column_head=None)
+            export_to_txt(data_list=keywords_reducer.trash_list,
+                            file_name=u"data_trash.txt",
+                            column_head=None)
             # tll = len(keywords_reducer.trash_list[0])
             # if tll == 1:
             #     keywords_reducer.trash_list = [i for i in keywords_reducer.trash_list]
@@ -27,9 +30,12 @@ def keywords_splitter(data_path, keywords_path, safewords_path='', index=2, one_
             #                 file_name=u"{0}_trash.xlsx".format(keywords_reducer.export_name),
             #                 column_head=trash_head)
         if keywords_reducer.cleaned_list:
-            export_to_excel(data_list=keywords_reducer.cleaned_list,
-                            file_name=u"data_clean.xlsx",
-                            column_head=None)
+            # export_to_excel(data_list=keywords_reducer.cleaned_list,
+            #                 file_name=u"data_clean.xlsx",
+            #                 column_head=None)
+            export_to_txt(data_list=keywords_reducer.cleaned_list,
+                          file_name=u"data_clean.txt",
+                          column_head=None)
             # cll = len(keywords_reducer.cleaned_list[0])
             # clean_head = [u"数据列" if i == index else u"原数据第{0}列".format(i) for i in xrange(cll)]
             # export_to_excel(data_list=keywords_reducer.cleaned_list,
@@ -39,7 +45,7 @@ def keywords_splitter(data_path, keywords_path, safewords_path='', index=2, one_
         print str(e)
     return
 
-def numbers_splitter(data_path=False, aim_number=3, index=1):
+def numbers_splitter(data_path=False, aim_number=34, index=2):
     numbers_reducer = NumbersReducer()
     numbers_reducer.data_column_index = index
     numbers_reducer.numbers = aim_number
@@ -49,9 +55,9 @@ def numbers_splitter(data_path=False, aim_number=3, index=1):
         # pickle_dump(file_name=u"trash_list", dump_object=keywords_reducer.trash_list)
         # pickle_dump(file_name=u"cleaned_list", dump_object=keywords_reducer.cleaned_list)
         if numbers_reducer.trash_list:
-            print 'there ara trashes.'
-            for row in numbers_reducer.trash_list:
-                print row
+            export_to_txt(data_list=numbers_reducer.trash_list,
+                          file_name=u"D:\workspace\Data\data_trash.txt",
+                          column_head=None)
             # tll = len(numbers_reducer.trash_list[0])
             # if tll == 1:
             #     numbers_reducer.trash_list = [i for i in numbers_reducer.trash_list]
@@ -60,9 +66,9 @@ def numbers_splitter(data_path=False, aim_number=3, index=1):
             #                 file_name=u"{0}_trash.xlsx".format(numbers_reducer.export_name),
             #                 column_head=trash_head)
         if numbers_reducer.cleaned_list:
-            print 'there ara cleans.'
-            for row in numbers_reducer.cleaned_list:
-                print row
+            export_to_txt(data_list=numbers_reducer.cleaned_list,
+                          file_name=u"D:\workspace\Data\data_clean.txt",
+                          column_head=None)
             # cll = len(numbers_reducer.cleaned_list[0])
             # clean_head = [u"数据列" if i == index else u"原数据第{0}列".format(i) for i in xrange(cll)]
             # export_to_excel(data_list=numbers_reducer.cleaned_list,
@@ -72,19 +78,19 @@ def numbers_splitter(data_path=False, aim_number=3, index=1):
         print str(e)
     return
 
-def abnormal_splitter(data_path=False, abnormal_number=30, index=1):
+def abnormal_splitter(data_path=False, abnormal_number=3, index=2):
     abnormal_reducer = AbnormalReducer()
     abnormal_reducer.data_column_index = index
-    abnormal_reducer.numbers = abnormal_number
+    abnormal_reducer.abnormal = abnormal_number
     abnormal_reducer.current_data_abspath = data_path
     try:
         abnormal_reducer.main()
         # pickle_dump(file_name=u"trash_list", dump_object=keywords_reducer.trash_list)
         # pickle_dump(file_name=u"cleaned_list", dump_object=keywords_reducer.cleaned_list)
         if abnormal_reducer.trash_list:
-            print 'there ara trashes.'
-            for row in abnormal_reducer.trash_list:
-                print row
+            export_to_txt(data_list=abnormal_reducer.trash_list,
+                          file_name=u"D:\workspace\Data\data_trash.txt",
+                          column_head=None)
             # tll = len(numbers_reducer.trash_list[0])
             # if tll == 1:
             #     numbers_reducer.trash_list = [i for i in numbers_reducer.trash_list]
@@ -93,9 +99,9 @@ def abnormal_splitter(data_path=False, abnormal_number=30, index=1):
             #                 file_name=u"{0}_trash.xlsx".format(numbers_reducer.export_name),
             #                 column_head=trash_head)
         if abnormal_reducer.cleaned_list:
-            print 'there ara cleans.'
-            for row in abnormal_reducer.cleaned_list:
-                print row
+            export_to_txt(data_list=abnormal_reducer.cleaned_list,
+                          file_name=u"D:\workspace\Data\data_clean.txt",
+                          column_head=None)
             # cll = len(numbers_reducer.cleaned_list[0])
             # clean_head = [u"数据列" if i == index else u"原数据第{0}列".format(i) for i in xrange(cll)]
             # export_to_excel(data_list=numbers_reducer.cleaned_list,
@@ -107,10 +113,12 @@ def abnormal_splitter(data_path=False, abnormal_number=30, index=1):
 
 
 if __name__ == u"__main__":
-    keywords_splitter(data_path=ur"D:\364\weibo32.txt",
-                      keywords_path=ur"D:\WorkSpace\Data\keywords.txt",
-                      safewords_path=ur'D:\WorkSpace\Data\safewords.txt',
-                      index=2, one_hit=False)
+    # keywords_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
+    #                   keywords_path=ur"D:\WorkSpace\Data\keywords.txt",
+    #                   safewords_path=ur'D:\WorkSpace\Data\safewords.txt',
+    #                   index=2, one_hit=False)
+    numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
+                     )
     # abnormal_splitter()
     # cl = pickle_load(u"cleaned_list.pickle")
     # tl = pickle_load(u"trash_list.pickle")
