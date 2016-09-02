@@ -1,8 +1,9 @@
- # coding: utf-8
+# coding: utf-8
 # __author__: u"John"
 from __future__ import with_statement
 from os import path
 import re
+
 
 # region 属性访问定义——字典后接'.' + key名，即可得到字典中key对应的内容
 class AttributeDict(dict):
@@ -15,6 +16,7 @@ class AttributeDict(dict):
     def __setattr__(self, attr, value):
         self[attr] = value
 # endregion
+
 
 # region 可复用基本类 可以得到文件名，文件拓展，还有一个加序号的方法
 class BaseReducer(object):
@@ -30,8 +32,8 @@ class BaseReducer(object):
         self.file_extension = None  # 当前文件的扩展名
         self.export_name = None  # 导出文件的命名
         self.export_head = None  # 导出文件的列名
-        self.id_column_index = None  # 指定需要处理的列索引号，起始号为0
-        self.data_column_index = None  # 数据有效列标志位
+        self.id_column_cclean_index = None  # 指定需要处理的列索引号，起始号为0
+        self.data_column_clean_index = None  # 数据有效列标志位
         self.keywords_list = []  # 关键词词库
         self.current_keywords = None  # 正在使用的关键词或正则表达式
         self.result_list = []  # 匹配到关键词的水帖列表，用于关键词正确性检验
@@ -43,7 +45,7 @@ class BaseReducer(object):
         self.current_string = None  # 正在处理的字符串
         self.trash_list = []  # 水军数据
         self.cleaned_list = []  # 去水之后的数据
-        self.header = False  # 读入的数据是否有表头
+        self.has_header = False  # 读入的数据是否有表头
         self.clean_index = []
         self.trash_index = []
         return
@@ -58,17 +60,18 @@ class BaseReducer(object):
         return path.splitext(path.basename(file_path))[0]
 
     @staticmethod
-    def one_column_indexer(data_list):
+    def one_column_clean_indexer(data_list):
         """
         将单列的数据变成带序号的数据
         :param data_list:  list(unicode)
         :return:  list(tuple(index, unicode))
         """
         ret = []
-        for i in xrange(len(data_list)):
-            ret.append((i + 1, data_list[i]))
+        for line in xrange(len(data_list)):
+            ret.append((line + 1, data_list[line]))
         return ret
 # endregion
+
 
 # region 关键词去水
 class KeywordsReducer(BaseReducer):
@@ -104,8 +107,8 @@ class KeywordsReducer(BaseReducer):
                     self.error_list.append(self.current_error)
                 else:
                     with f:
-                        if self.header:
-                            line = f.readline()
+                        if self.has_header:
+                            f.readline()
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
@@ -126,7 +129,7 @@ class KeywordsReducer(BaseReducer):
         else:
             pass
         if self.current_dict_abspath:
-            self.export_name = u"{0}-{1}".format(self.export_name , self.get_file_name(self.current_dict_abspath))
+            self.export_name = u"{0}-{1}".format(self.export_name, self.get_file_name(self.current_dict_abspath))
             try:
                 f = open(self.current_dict_abspath, u"rb")
             except IOError as e:
@@ -173,11 +176,11 @@ class KeywordsReducer(BaseReducer):
         self.count_list = [0] * len(self.keywords_list)
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = string[self.data_column_clean_index]
             hit = False
             # for keywords in self.keywords_list:
-            for i in range(0, len(self.keywords_list)):
-                keywords = self.keywords_list[i]
+            for keywords_index in range(0, len(self.keywords_list)):
+                keywords = self.keywords_list[keywords_index]
                 self.current_keywords = keywords
                 self.keywords_finder()
                 if self.current_result:
@@ -185,7 +188,7 @@ class KeywordsReducer(BaseReducer):
                     self.trash_list.append(hit_info)
                     self.result_list.append(self.current_result)
                     hit = True
-                    self.count_list[i] +=1
+                    self.count_list[keywords_index] += 1
                     if self.one_hit_strategy:
                         break
                     else:
@@ -200,21 +203,22 @@ class KeywordsReducer(BaseReducer):
                 self.cleaned_list.append(string)
 
         if self.show_process:
-            totallength = float(len(self.raw_list))
-            keywordcount = 0
-            for i in self.count_list:
-                keywordcount += i
-            print u'關鍵詞標記微博數量為 ' + str(keywordcount) + u' 占' + str(keywordcount / totallength * 100) + '%'
+            total_length = float(len(self.raw_list))
+            keyword_count = 0
+            for count in self.count_list:
+                keyword_count += count
+            print u'關鍵詞標記微博數量為 ' + str(keyword_count) + u' 占' + str(keyword_count / total_length * 100) + '%'
             print u"{0}以下是關鍵詞標記的水贴{0}".format(u"-" * 30)
-            for i in range(len(self.count_list)):
-                # if countlist[i]/totallength*100 < 1:
-                print u'关键词 "' + self.keywords_list[i] + u'" 匹配的微博数量为 ' \
-                      + str(self.count_list[i]) + u'  占' + str(self.count_list[i] / totallength * 100) + '%'
+            for count_index in range(len(self.count_list)):
+                print u'关键词 "' + self.keywords_list[count_index] + u'" 匹配的微博数量为 ' \
+                      + str(self.count_list[count_index]) + u'  占' + \
+                      str(self.count_list[count_index] / total_length * 100) + '%'
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
         # self.keywords_list = None
         return
 # endregion
+
 
 # region 标签去水
 class TagsReducer(BaseReducer):
@@ -250,8 +254,8 @@ class TagsReducer(BaseReducer):
                     self.error_list.append(self.current_error)
                 else:
                     with f:
-                        if self.header:
-                            line = f.readline()
+                        if self.has_header:
+                            f.readline()
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
@@ -264,22 +268,18 @@ class TagsReducer(BaseReducer):
 
     def get_tags(self):
         if self.current_string:
-            tags = 0
             tags_num = 0
-            char_num = 0
-            try:
-                seg_list = re.findall(ur'#.*?#', self.current_string)
-                seg_list2 = re.findall(ur'【.*?】|★|◆', self.current_string)
-                tags = len(seg_list) + len(seg_list2)*self.tags
-                for seg in seg_list:
-                    tags_num += len(re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", seg))
 
-                char_list = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
-                char_num = len(char_list) - tags_num
-            except:
-                print("tags goes wrong")
-            else:
-                return tags, char_num
+            seg_list = re.findall(ur'#.*?#', self.current_string)
+            seg_list2 = re.findall(ur'【.*?】|★|◆', self.current_string)
+            tags = len(seg_list) + len(seg_list2)*self.tags
+            for seg in seg_list:
+                tags_num += len(re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", seg))
+
+            char_list = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
+            char_num = len(char_list) - tags_num
+
+            return tags, char_num
 
     def tags_finder(self):
         """
@@ -299,7 +299,7 @@ class TagsReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = string[self.data_column_clean_index]
             self.tags_finder()
             if self.current_result:
                 self.clean_index.append(index)
@@ -312,6 +312,7 @@ class TagsReducer(BaseReducer):
         # self.keywords_list = None
         return
 # endregion
+
 
 # region 字数个数去水
 class NumbersReducer(BaseReducer):
@@ -346,8 +347,8 @@ class NumbersReducer(BaseReducer):
                     self.error_list.append(self.current_error)
                 else:
                     with f:
-                        if self.header:
-                            line = f.readline()
+                        if self.has_header:
+                            f.readline()
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
@@ -362,6 +363,7 @@ class NumbersReducer(BaseReducer):
             python的正则表达式可以直接支持中文
             :return:
             """
+        numbers = []
         try:
             numbers = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
         except Exception as e:
@@ -371,10 +373,10 @@ class NumbersReducer(BaseReducer):
             self.error_list.append(self.current_error)
             self.current_result = []
         else:
-            numbercounts = ''
-            for i in numbers:
-                numbercounts += i
-            self.current_result = len(numbercounts) > self.numbers
+            number_counts = ''
+            for numbers_index in numbers:
+                number_counts += numbers_index
+            self.current_result = len(number_counts) > self.numbers
         if self.show_process:
             if self.current_result == self.numbers:
                 print u"含有的数字个数\n{0}".format(len(numbers))
@@ -393,7 +395,7 @@ class NumbersReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = string[self.data_column_clean_index]
             self.number_finder()
             if self.current_result:
                 self.clean_index.append(index)
@@ -407,6 +409,7 @@ class NumbersReducer(BaseReducer):
         # self.keywords_list = None
         return
 # endregion
+
 
 # region 非正常字符种数去水
 class AbnormalReducer(BaseReducer):
@@ -441,8 +444,8 @@ class AbnormalReducer(BaseReducer):
                     self.error_list.append(self.current_error)
                 else:
                     with f:
-                        if self.header:
-                            line = f.readline()
+                        if self.has_header:
+                            f.readline()
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
@@ -459,19 +462,20 @@ class AbnormalReducer(BaseReducer):
             """
         try:
             char_list = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
-            matchs = re.findall(ur"[^—@~~:：?!！/ ,，.\[\]()（）\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
+            match = re.findall(ur"[^—@~:：?!！/ ,，.\[\]()（）\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]", 
+                               self.current_string)
         except Exception as e:
             self.current_error = str(e)
             self.code_message.code = 3
-            self.code_message.message = u"number_finder re.findll error"
+            self.code_message.message = u"number_finder re.find error"
             self.error_list.append(self.current_error)
             self.current_result = []
         else:
-            numbercounts = ''
-            for i in matchs:
-                numbercounts += i
-            numbercounts = set(numbercounts)
-            self.current_result = len(numbercounts) < self.abnormal and len(matchs)*2 <= len(char_list)
+            number_counts = ''
+            for match_index in match:
+                number_counts += match_index
+            number_counts = set(number_counts)
+            self.current_result = len(number_counts) < self.abnormal and len(match)*2 <= len(char_list)
         if self.show_process:
             if self.current_result:
                 print u"含有的符号个数大于\n{0}".format(self.abnormal)
@@ -490,7 +494,7 @@ class AbnormalReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = string[self.data_column_clean_index]
             self.abnormal_finder()
             if self.current_result:
                 self.clean_index.append(index)
@@ -504,6 +508,7 @@ class AbnormalReducer(BaseReducer):
         # self.keywords_list = None
         return
 # endregion
+
 
 # region 客户端去水
 class SourcesReducer(BaseReducer):
@@ -538,8 +543,8 @@ class SourcesReducer(BaseReducer):
                     self.error_list.append(self.current_error)
                 else:
                     with f:
-                        if self.header:
-                            line = f.readline()
+                        if self.has_header:
+                            f.readline()
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
@@ -559,7 +564,7 @@ class SourcesReducer(BaseReducer):
         else:
             pass
         if self.current_dict_abspath:
-            self.export_name = u"{0}-{1}".format(self.export_name , self.get_file_name(self.current_dict_abspath))
+            self.export_name = u"{0}-{1}".format(self.export_name, self.get_file_name(self.current_dict_abspath))
             try:
                 f = open(self.current_dict_abspath, u"rb")
             except IOError as e:
@@ -614,7 +619,7 @@ class SourcesReducer(BaseReducer):
         self.count_list = [0] * len(self.keywords_list)
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = string[self.data_column_clean_index]
             self.sources_finder()
             if self.current_result:
                 self.clean_index.append(index)
@@ -636,14 +641,14 @@ if __name__ == u"__main__":
     # kr = TagsReducer()
     # kr = NumbersReducer()
     kr.numbers = 10
-    kr.header = False
+    kr.has_header = False
     kr.show_process = False
-    kr.usehottags = False
+    kr.use_hot_tags = False
     kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample.txt"
-    kr.data_column_index = 2
+    kr.data_column_clean_index = 2
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
 
-    kr.data_column_index = 3
+    kr.data_column_clean_index = 3
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
 
     try:
@@ -652,19 +657,19 @@ if __name__ == u"__main__":
         print str(exc)
 
     print u"{0}统计信息{0}".format(u"-" * 30)
-    print u'共有微博 ' +str(len(kr.raw_list))
-    print u'水有 ' + str(len(kr.raw_list)-len(kr.cleaned_list)) + u'条'
-    print u'重复水有 ' + str(len(kr.trash_list)-len(kr.raw_list)+len(kr.cleaned_list)) + u'条'
+    print u'共有微博 ' + str(len(kr.raw_list))
+    print u'水有 ' + str(len(kr.raw_list) - len(kr.cleaned_list)) + u'条'
+    print u'重复水有 ' + str(len(kr.trash_list) - len(kr.raw_list) + len(kr.cleaned_list)) + u'条'
     print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
-    print u'去水率 ' + str(float(len(kr.raw_list)-len(kr.cleaned_list))/len(kr.raw_list)*100) + u'%'
+    print u'去水率 ' + str(float(len(kr.raw_list) - len(kr.cleaned_list)) / len(kr.raw_list) * 100) + u'%'
 
     # region 数据测试
-    index = [3,4,26,29,33,42,55,62,70,80,83,100,109,113,119,121,171,204,261,284,290,349,385,
-             397,415,421,435,551,590,615,618,771,778,781,793,843,963,965,972]
+    clean_index = [3, 4, 26, 29, 33, 42, 55, 62, 70, 80, 83, 100, 109, 113, 119, 121, 171, 204, 261, 284, 290, 349,
+                   385, 397, 415, 421, 435, 551, 590, 615, 618, 771, 778, 781, 793, 843, 963, 965, 972]
 
     B = 0
     for i in kr.trash_index:
-        if (int(i)+1) in index:
+        if (int(i) + 1) in clean_index:
             B += 1
             print i
             print kr.raw_list[i][2]
@@ -672,17 +677,17 @@ if __name__ == u"__main__":
 
     A = 0
     for i in kr.clean_index:
-        if (int(i)+1) in index:
+        if (int(i) + 1) in clean_index:
             A += 1
 
-    D = len(kr.raw_list)-len(kr.cleaned_list) - B
+    D = len(kr.raw_list) - len(kr.cleaned_list) - B
     C = len(kr.cleaned_list) - A
-    if A+B != 0:
-        precise = A/float(A+B)*100
+    if A + B != 0:
+        precise = A / float(A + B) * 100
     else:
         precise = 0
-    if A+C != 0:
-        recall = A/float(A+C)*100
+    if A + C != 0:
+        recall = A / float(A + C) * 100
     else:
         recall = 0
     if precise + recall != 0:
