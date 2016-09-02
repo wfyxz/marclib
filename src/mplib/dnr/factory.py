@@ -16,7 +16,6 @@ class AttributeDict(dict):
         self[attr] = value
 # endregion
 
-
 # region 可复用基本类 可以得到文件名，文件拓展，还有一个加序号的方法
 class BaseReducer(object):
     """
@@ -44,6 +43,9 @@ class BaseReducer(object):
         self.current_string = None  # 正在处理的字符串
         self.trash_list = []  # 水军数据
         self.cleaned_list = []  # 去水之后的数据
+        self.header = False  # 读入的数据是否有表头
+        self.clean_index = []
+        self.trash_index = []
         return
 
     @staticmethod
@@ -68,7 +70,6 @@ class BaseReducer(object):
         return ret
 # endregion
 
-
 # region 关键词去水
 class KeywordsReducer(BaseReducer):
     """
@@ -77,10 +78,7 @@ class KeywordsReducer(BaseReducer):
     def __init__(self):
         BaseReducer.__init__(self)
         self.one_hit_strategy = False
-        self.usehottags = True
-        self.hottags = []
-        self.safewords_list = []
-        self.current_safedict_abspath = ''
+        self.count_list = []
 
     def get_contents(self):
         """
@@ -106,78 +104,16 @@ class KeywordsReducer(BaseReducer):
                     self.error_list.append(self.current_error)
                 else:
                     with f:
+                        if self.header:
+                            line = f.readline()
                         for line in f:
-                            # line = line.encode(u"gb2312").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
+
                         self.code_message.message = u"data file import successfully"
         else:
             self.raw_list = [(1, u"关键词"), (2, u"这是一个正"), (3, u"这是一个藏得很深的水贴，你检测不出来"),
                              (4, u"则表达式呢")]
-        return
-
-    def get_hottags(self):
-        if self.hottags:
-            return
-        else:
-            pass
-        if self.raw_list:
-            cont = [i[self.data_column_index] for i in self.raw_list]
-            wordcut = r'\n'.join(cont)
-            wordcuts = wordcut.split(r'\n')
-
-            result = []
-            for i in wordcuts:
-                try:
-                    seg_list = re.findall('#.*?#', i)
-                    for j in seg_list:
-                        if len(j) >= 3:
-                            result.append(j.strip('#'))
-                except:
-                    print("some wrong")
-
-            dic_result = {}
-            for i in result:
-                if i in dic_result:
-                    dd = dic_result.get(i)
-                    dic_result[i] = dd + 1
-                else:
-                    dic_result[i] = 1
-            dic_result = sorted(dic_result.items(), key=lambda asd: asd[1], reverse=True)
-            #dic_data = DataFrame(dic_result, columns=['keyword', 'frequency'])
-
-            self.hottags = [i[0] for i in dic_result[:8]]
-            # print [i[1] for i in dic_result[:20]]
-            # for i in self.hottags:
-            #     print i
-            # print len(self.hottags)
-
-    def get_safewords(self):
-        """
-            数据库的操作后将数据赋值给 self.safewords_list
-            :return:
-            """
-        if self.safewords_list:
-            return
-        else:
-            pass
-        if self.current_safedict_abspath:
-            self.export_name = u"{0}-{1}".format(self.export_name, self.get_file_name(self.current_dict_abspath))
-            try:
-                f = open(self.current_safedict_abspath, u"rb")
-            except IOError as e:
-                self.current_error = str(e)
-                self.code_message.code = 1
-                self.code_message.message = u"get_safewords open(file) IOError"
-                self.error_list.append(self.current_error)
-            else:
-                with f:
-                    # self.safewords_list += f.read().decode(u"gb2312").split(u"\r\n")
-                    self.safewords_list += f.read().decode(u"utf-8").split(u"\r\n")
-                    self.code_message.message = u"cleanwords dictionary import successfully"
-        else:
-            self.safewords_list = [u"非关键词", u"奥运"]
-
         return
 
     def get_keywords(self):
@@ -201,32 +137,14 @@ class KeywordsReducer(BaseReducer):
             else:
                 with f:
                     # self.keywords_list += f.read().decode(u"gb2312").split(u"\r\n")
-                    self.keywords_list += f.read().decode(u"utf-8").split(u"\r\n")
+                    keyword = f.read().decode(u"utf-8").strip().split(u"\r\n")
+                    if keyword:
+                        self.keywords_list += keyword
                     self.code_message.message = u"keywords dictionary import successfully"
         else:
             self.keywords_list = [u"关键词", u"(正|则|表|达|式)"]
 
         return
-
-    def keyword_merge(self):
-        rawkeywords = self.hottags + self.keywords_list
-        newkeywords = []
-        if self.current_safedict_abspath:
-            for i in rawkeywords:
-                contain = False
-                for j in self.safewords_list:
-                    if j in i and j:
-                        contain = True
-                    else:
-                        continue
-                if contain:
-                    pass
-                else:
-                    newkeywords.append(i)
-
-            self.keywords_list = newkeywords
-        else:
-            self.keywords_list = rawkeywords
 
     def keywords_finder(self):
         """
@@ -243,16 +161,6 @@ class KeywordsReducer(BaseReducer):
             self.current_result = []
         else:
             self.current_result = re.findall(pattern, self.current_string)
-        if self.show_process:
-            if self.current_result:
-                print u"找到关键词\n{0}".format(self.current_keywords)
-                for r in self.current_result:
-                    print r
-            else:
-                # print u"没有找到关键词\n{0}".format(keywords)
-                pass
-        else:
-            pass
         return
 
     def main(self):
@@ -261,17 +169,14 @@ class KeywordsReducer(BaseReducer):
         :return:
         """
         self.get_contents()
-        if self.usehottags:
-            self.get_hottags()
-        self.get_safewords()
         self.get_keywords()
-        self.keyword_merge()
-        countlist = [0]*len(self.keywords_list)
-        for string in self.raw_list:
+        self.count_list = [0] * len(self.keywords_list)
+        for index in range(len(self.raw_list)):
+            string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
             hit = False
             # for keywords in self.keywords_list:
-            for i in range(0,len(self.keywords_list)):
+            for i in range(0, len(self.keywords_list)):
                 keywords = self.keywords_list[i]
                 self.current_keywords = keywords
                 self.keywords_finder()
@@ -280,7 +185,7 @@ class KeywordsReducer(BaseReducer):
                     self.trash_list.append(hit_info)
                     self.result_list.append(self.current_result)
                     hit = True
-                    countlist[i] +=1
+                    self.count_list[i] +=1
                     if self.one_hit_strategy:
                         break
                     else:
@@ -288,44 +193,38 @@ class KeywordsReducer(BaseReducer):
                 else:
                     continue
             if hit:
+                self.trash_index.append(index)
                 continue
             else:
+                self.clean_index.append(index)
                 self.cleaned_list.append(string)
 
-        totallength = float(len(self.raw_list))
-        tagscount = 0
-        keywordcount = 0
-        for i in countlist[:8]:
-            tagscount += i
-        for i in countlist[8:]:
-            keywordcount += i
-        print u'前八個tags標記微博數量為 ' + str(tagscount) + u' 占' + str(tagscount/totallength*100) + '%'
-        print u'關鍵詞標記微博數量為 ' + str(keywordcount) + u' 占' + str(keywordcount / totallength * 100) + '%'
-        print u"{0}以下是前八個tags標記的水贴{0}".format(u"-" * 30)
-        for i in range(0, 8):
-            # if countlist[i]/totallength*100 < 1:
-            print u'tag "' + self.keywords_list[i] + u'" 匹配的微博数量为 ' \
-                  + str(countlist[i]) + u'  占' + str(countlist[i] / totallength * 100) + '%'
-        print u"{0}以下是關鍵詞標記的水贴{0}".format(u"-" * 30)
-        for i in range(8,len(countlist)):
-            # if countlist[i]/totallength*100 < 1:
-            print u'关键词 "' + self.keywords_list[i] + u'" 匹配的微博数量为 ' \
-                  + str(countlist[i]) + u'  占' + str(countlist[i]/totallength*100) + '%'
+        if self.show_process:
+            totallength = float(len(self.raw_list))
+            keywordcount = 0
+            for i in self.count_list:
+                keywordcount += i
+            print u'關鍵詞標記微博數量為 ' + str(keywordcount) + u' 占' + str(keywordcount / totallength * 100) + '%'
+            print u"{0}以下是關鍵詞標記的水贴{0}".format(u"-" * 30)
+            for i in range(len(self.count_list)):
+                # if countlist[i]/totallength*100 < 1:
+                print u'关键词 "' + self.keywords_list[i] + u'" 匹配的微博数量为 ' \
+                      + str(self.count_list[i]) + u'  占' + str(self.count_list[i] / totallength * 100) + '%'
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
         # self.keywords_list = None
         return
 # endregion
 
-
-# region 数字个数去水
-class NumbersReducer(BaseReducer):
+# region 标签去水
+class TagsReducer(BaseReducer):
     """
-    利用数字个数去水的工具，数字暂定为34
+    利用#标签#个数，其余字数去水的工具
     """
     def __init__(self):
         BaseReducer.__init__(self)
-        self.numbers = 34
+        self.numbers = 10
+        self.tags = 2
 
     def get_contents(self):
         """
@@ -351,6 +250,104 @@ class NumbersReducer(BaseReducer):
                     self.error_list.append(self.current_error)
                 else:
                     with f:
+                        if self.header:
+                            line = f.readline()
+                        for line in f:
+                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
+                            self.raw_list.append(tuple(line))
+
+                        self.code_message.message = u"data file import successfully"
+        else:
+            self.raw_list = [(1, u"关键词"), (2, u"这是一个正"), (3, u"这是一个藏得很深的水贴，你检测不出来"),
+                             (4, u"则表达式呢")]
+        return
+
+    def get_tags(self):
+        if self.current_string:
+            tags = 0
+            tags_num = 0
+            char_num = 0
+            try:
+                seg_list = re.findall(ur'#.*?#', self.current_string)
+                seg_list2 = re.findall(ur'【.*?】|★|◆', self.current_string)
+                tags = len(seg_list) + len(seg_list2)*self.tags
+                for seg in seg_list:
+                    tags_num += len(re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", seg))
+
+                char_list = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
+                char_num = len(char_list) - tags_num
+            except:
+                print("tags goes wrong")
+            else:
+                return tags, char_num
+
+    def tags_finder(self):
+        """
+        python的正则表达式可以直接支持中文
+        :return:
+        """
+        tags, char_num = self.get_tags()
+
+        self.current_result = char_num >= self.numbers and tags < self.tags
+        return
+
+    def main(self):
+        """
+        复杂应用才需要Override这部分
+        :return:
+        """
+        self.get_contents()
+        for index in range(len(self.raw_list)):
+            string = self.raw_list[index]
+            self.current_string = string[self.data_column_index]
+            self.tags_finder()
+            if self.current_result:
+                self.clean_index.append(index)
+                self.cleaned_list.append(string)
+            else:
+                self.trash_index.append(index)
+                self.trash_list.append(string)
+        # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
+        # self.raw_list = None
+        # self.keywords_list = None
+        return
+# endregion
+
+# region 字数个数去水
+class NumbersReducer(BaseReducer):
+    """
+    利用文字个数去水的工具，数字暂定为34
+    """
+    def __init__(self):
+        BaseReducer.__init__(self)
+        self.numbers = 8
+
+    def get_contents(self):
+        """
+        可以通过外部赋值设置值，也可以通过别的方法实现
+        数据库的操作后将数据赋值给 self.raw_list
+        :return:
+        """
+        if self.raw_list:
+            return
+        else:
+            pass
+        if self.current_data_abspath:
+            self.file_extension = self.get_file_extension(self.current_data_abspath)
+            self.export_name = self.get_file_name(self.current_data_abspath)
+            if self.file_extension == u"txt":
+                try:
+                    f = open(self.current_data_abspath, u"rb")
+                    # 2进制模式打开
+                except IOError as e:
+                    self.current_error = str(e)
+                    self.code_message.code = 1
+                    self.code_message.message = u"get_contents open(file) IOError"
+                    self.error_list.append(self.current_error)
+                else:
+                    with f:
+                        if self.header:
+                            line = f.readline()
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
@@ -366,7 +363,7 @@ class NumbersReducer(BaseReducer):
             :return:
             """
         try:
-            numbers = re.findall(r"\d+\.?\d*", self.current_string)
+            numbers = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
         except Exception as e:
             self.current_error = str(e)
             self.code_message.code = 3
@@ -377,7 +374,7 @@ class NumbersReducer(BaseReducer):
             numbercounts = ''
             for i in numbers:
                 numbercounts += i
-            self.current_result = len(numbercounts) >= self.numbers
+            self.current_result = len(numbercounts) > self.numbers
         if self.show_process:
             if self.current_result == self.numbers:
                 print u"含有的数字个数\n{0}".format(len(numbers))
@@ -394,15 +391,16 @@ class NumbersReducer(BaseReducer):
         :return:
         """
         self.get_contents()
-        for string in self.raw_list:
+        for index in range(len(self.raw_list)):
+            string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
-
             self.number_finder()
             if self.current_result:
-                self.trash_list.append(string)
-
-            else:
+                self.clean_index.append(index)
                 self.cleaned_list.append(string)
+            else:
+                self.trash_index.append(index)
+                self.trash_list.append(string)
 
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
@@ -410,8 +408,7 @@ class NumbersReducer(BaseReducer):
         return
 # endregion
 
-
-# region 非正常字符个数去水
+# region 非正常字符种数去水
 class AbnormalReducer(BaseReducer):
     """
     利用异常字符种数去水的工具，数字暂定为5
@@ -444,6 +441,8 @@ class AbnormalReducer(BaseReducer):
                     self.error_list.append(self.current_error)
                 else:
                     with f:
+                        if self.header:
+                            line = f.readline()
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
@@ -453,13 +452,14 @@ class AbnormalReducer(BaseReducer):
                              (4, u"1%则%4表达%2式6%呢")]
         return
 
-    def number_finder(self):
+    def abnormal_finder(self):
         """
             python的正则表达式可以直接支持中文
             :return:
             """
         try:
-            matchs = re.findall(ur"[^ ,，.\[\]()（）\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
+            char_list = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
+            matchs = re.findall(ur"[^—@~~:：?!！/ ,，.\[\]()（）\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
         except Exception as e:
             self.current_error = str(e)
             self.code_message.code = 3
@@ -471,10 +471,10 @@ class AbnormalReducer(BaseReducer):
             for i in matchs:
                 numbercounts += i
             numbercounts = set(numbercounts)
-            self.current_result = len(numbercounts) >= self.abnormal
+            self.current_result = len(numbercounts) < self.abnormal and len(matchs)*2 <= len(char_list)
         if self.show_process:
-            if self.current_result == self.abnormal:
-                print u"含有的数字个数\n{0}".format(len(matchs))
+            if self.current_result:
+                print u"含有的符号个数大于\n{0}".format(self.abnormal)
             else:
                 # print u"没有匹配\n{0}".format(self.abnormal)
                 pass
@@ -488,15 +488,16 @@ class AbnormalReducer(BaseReducer):
         :return:
         """
         self.get_contents()
-        for string in self.raw_list:
+        for index in range(len(self.raw_list)):
+            string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
-
-            self.number_finder()
+            self.abnormal_finder()
             if self.current_result:
-                self.trash_list.append(string)
-
-            else:
+                self.clean_index.append(index)
                 self.cleaned_list.append(string)
+            else:
+                self.trash_index.append(index)
+                self.trash_list.append(string)
 
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
@@ -504,21 +505,147 @@ class AbnormalReducer(BaseReducer):
         return
 # endregion
 
+# region 客户端去水
+class SourcesReducer(BaseReducer):
+    """
+    利用异常字符种数去水的工具，数字暂定为5
+    """
+    def __init__(self):
+        BaseReducer.__init__(self)
+        self.count_list = []
+
+    def get_contents(self):
+        """
+        可以通过外部赋值设置值，也可以通过别的方法实现
+        数据库的操作后将数据赋值给 self.raw_list
+        :return:
+        """
+        if self.raw_list:
+            return
+        else:
+            pass
+        if self.current_data_abspath:
+            self.file_extension = self.get_file_extension(self.current_data_abspath)
+            self.export_name = self.get_file_name(self.current_data_abspath)
+            if self.file_extension == u"txt":
+                try:
+                    f = open(self.current_data_abspath, u"rb")
+                    # 2进制模式打开
+                except IOError as e:
+                    self.current_error = str(e)
+                    self.code_message.code = 1
+                    self.code_message.message = u"get_contents open(file) IOError"
+                    self.error_list.append(self.current_error)
+                else:
+                    with f:
+                        if self.header:
+                            line = f.readline()
+                        for line in f:
+                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
+                            self.raw_list.append(tuple(line))
+                        self.code_message.message = u"data file import successfully"
+        else:
+            self.raw_list = [(1, u"关键%词1"), (2, u"1这是%一%个正2"), (3, u"这2%是一个藏得很深%的2水贴，你检测%不3出来"),
+                             (4, u"1%则%4表达%2式6%呢")]
+        return
+
+    def get_keywords(self):
+        """
+        数据库的操作后将数据赋值给 self.keywords_list
+        :return:
+        """
+        if self.keywords_list:
+            return
+        else:
+            pass
+        if self.current_dict_abspath:
+            self.export_name = u"{0}-{1}".format(self.export_name , self.get_file_name(self.current_dict_abspath))
+            try:
+                f = open(self.current_dict_abspath, u"rb")
+            except IOError as e:
+                self.current_error = str(e)
+                self.code_message.code = 1
+                self.code_message.message = u"get_keywords open(file) IOError"
+                self.error_list.append(self.current_error)
+            else:
+                with f:
+                    # self.keywords_list += f.read().decode(u"gb2312").split(u"\r\n")
+                    keyword = f.read().decode(u"utf-8").strip().split(u"\r\n")
+                    if keyword:
+                        self.keywords_list += keyword
+                    self.code_message.message = u"keywords dictionary import successfully"
+        else:
+            self.keywords_list = [u"扇贝单词", u"微博相机"]
+
+        return
+
+    def sources_finder(self):
+        """
+        python的正则表达式可以直接支持中文
+        :return:
+        """
+        pattern = re.compile(pattern=ur'>[^@]*<', flags=0)
+        self.current_string = re.findall(pattern, self.current_string)
+        if self.current_string:
+            self.current_string = self.current_string[0]
+        else:
+            self.current_string = ur''
+        self.current_string = self.current_string.strip(u'><')
+        self.current_result = self.current_string not in self.keywords_list
+        if self.show_process:
+            if self.current_result:
+                print u"找到关键词\n{0}".format(self.current_keywords)
+                for r in self.current_result:
+                    print r
+            else:
+                # print u"没有找到关键词\n{0}".format(keywords)
+                pass
+        else:
+            pass
+        return
+
+    def main(self):
+        """
+        复杂应用才需要Override这部分
+        :return:
+        """
+        self.get_contents()
+        self.get_keywords()
+        self.count_list = [0] * len(self.keywords_list)
+        for index in range(len(self.raw_list)):
+            string = self.raw_list[index]
+            self.current_string = string[self.data_column_index]
+            self.sources_finder()
+            if self.current_result:
+                self.clean_index.append(index)
+                self.cleaned_list.append(string)
+            else:
+                self.trash_index.append(index)
+                self.trash_list.append(string)
+
+        # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
+        # self.raw_list = None
+        # self.keywords_list = None
+        return
+# endregion
 
 if __name__ == u"__main__":
-
     # kr = AbnormalReducer()
-    kr = NumbersReducer()
     # kr = KeywordsReducer()
-    kr.numbers = 34
-    kr.data_column_index = 2
+    kr = SourcesReducer()
+    # kr = TagsReducer()
+    # kr = NumbersReducer()
+    kr.numbers = 10
+    kr.header = False
     kr.show_process = False
-    # kr.num_match_strategy = False
-    # kr.current_data_abspath = ur"D:\364\weibo75.txt"
-    # kr.current_data_abspath = ur"D:\weibotop20.txt"
-    kr.current_data_abspath = ur"D:\WorkSpace\Data\weibo1.txt"
+    kr.usehottags = False
+    kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample.txt"
+    kr.data_column_index = 2
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
-    kr.current_safedict_abspath = ur"D:\WorkSpace\Data\safewords.txt"
+
+    kr.data_column_index = 3
+    kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
+
     try:
         kr.main()
     except Exception as exc:
@@ -529,25 +656,23 @@ if __name__ == u"__main__":
     print u'水有 ' + str(len(kr.raw_list)-len(kr.cleaned_list)) + u'条'
     print u'重复水有 ' + str(len(kr.trash_list)-len(kr.raw_list)+len(kr.cleaned_list)) + u'条'
     print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
+    print u'去水率 ' + str(float(len(kr.raw_list)-len(kr.cleaned_list))/len(kr.raw_list)*100) + u'%'
 
-
-    content = [
-        u'\u8fd1UA\uff0c\u5ba2\u5385350\u5200/\u6708+\u7f51\u8d39\u5e73\u5206\uff0810.5\u5200\uff09\uff0c9\u6708\u62db\u957f\u79df\u5973\u5ba4\u53cb\uff0c\u5730\u5740\uff1a115 st & 76 ave\uff0c2\u5206\u949f\u5230mckernan station\uff0clrt\u57504\u5206\u949f\u5230university station,\u5ba4\u53cb\u5168\u5973\u751f\uff0c\u95e8\u53e3\u5404\u79cd\u516c\u4ea4\u8f66\u901aUA\u53ca\u8d85\u5e02\uff0c\u6709\u5174\u8da3\u7684\u8bf7\u79c1\u4fe1\u6216\u7535\u8bdd:7807102029\uff0c\u8c22\u8c22\u7231\u57ce\u4e3b\u9875\u541b@\u7231\u57ce\u5fae\u535a-\u5e2e\u5e2e\u5fd9 [\u7231\u4f60]',
-        u'Day1 \u4e00\u4e00 5\uff1a30\u6765\u5230\u706f\u706b\u901a\u660e\u7684\u5723\u5730 1. 2.4\u516c\u91cc\u70ed\u8eab\uff08\u51d1\u5230240\uff0f500\uff1b2. 1\u8282Grit Cardio \u7b2c\u4e00\u6b21\u4f53\u9a8c\uff1b3.1\u8282CX \u63d0\u524d\u611f\u53d7\u83b1\u7f8efilm\u5185\u5bb9\uff1b4.50\u5206\u949f\u529b\u91cf\u8bad\u7ec3 \u5728\u4f17\u591a\u5f6a\u608d\u7684\u8001\u5916\u805a\u96c6\u5730\u64b8\u94c1 \u8001\u523a\u6fc0\u4e86\u2026\u2026\u4e0a\u5348\u7ed3\u675f[\u594b\u6597] \u671f\u5f85\u4e0b\u5348\u7684BC \u7edd\u5bf9\u4f1a\u7528\u5fc3\u611f\u53d7[\u9f13\u638c]',
-        u'I just ran 10.05KM with @\u60a6\u8dd1\u5708, within:01:06:03.http://wap.thejoyrun.com/po_2077579_65248952.html',
-        u'\u65b0\u57fa\u5730\u8981\u7ed9\u5b69\u5b50\u4eec\u62c9\u8dd1\u5708\uff0c\u8c01\u6709\u8d44\u6e90\u53ef\u4ee5\u5b9a\u505a\u8dd1\u5708\u56f4\u680f\uff0c\u4ef7\u683c\u4fbf\u5b9c\u4e9b\u7684\uff0c\u5c3a\u5bf8\u9700\u89811.8\u7c73*2\u7c73\uff0c\u5927\u6982\u9700\u8981120-130\u7247\u5de6\u53f3\uff0c\u6700\u597d\u5305\u5b89\u88c5\u3002\u6574\u6574\u6253\u4e86\u4e00\u5929\u7535\u8bdd\u627e\u4e86\u65e0\u6570\u5bb6\u5b9a\u505a\u56f4\u680f\u7684\uff0c\u603b\u4ef7\u90fd\u5728\u4e24\u4e07\u4ee5\u4e0a\uff0c\u5b9e\u5728\u592a\u8d35\uff0c\u81ea\u5df1\u505a\u5b9e\u5728\u662f\u5e72\u4e0d\u52a8\u4e86\u3002\u8bf7\u5927\u5bb6\u5e2e\u5fd9\u3002\u611f\u8c22\u3002\u5fae\u4fe1\uff1a413268154\u3002\u7535\u8bdd\uff1a13501105906',
-        u'10701070107010701070107010701070\u6211\u4e70\u4e86[\u5fae\u7b11]\u4efb\u6027[\u5fae\u7b11]\u4e0d\u6015\u6b7b[\u5fae\u7b11]',
-        u'\u6652\u4e2a\u7709\u6bdb\u65bd\u672f\u540e\u7acb\u5373\u56fe \u4e0b\u5348\u4e0d\u73a9\u624b\u673a\u4e86 \u9888\u690e\u4e0d\u8212\u670d \u5982\u679c\u7d27\u6025\u4e8b\u60c5\u6253\u6211\u7535\u8bdd13023961110/18060287080/17750695051']
+    # region 数据测试
+    index = [3,4,26,29,33,42,55,62,70,80,83,100,109,113,119,121,171,204,261,284,290,349,385,
+             397,415,421,435,551,590,615,618,771,778,781,793,843,963,965,972]
 
     B = 0
-    for i in kr.trash_list:
-        if i[kr.data_column_index] in content:
+    for i in kr.trash_index:
+        if (int(i)+1) in index:
             B += 1
-            #print i[kr.data_column_index]
+            print i
+            print kr.raw_list[i][2]
+            print kr.raw_list[i][3]
 
     A = 0
-    for i in kr.cleaned_list:
-        if i[kr.data_column_index] in content:
+    for i in kr.clean_index:
+        if (int(i)+1) in index:
             A += 1
 
     D = len(kr.raw_list)-len(kr.cleaned_list) - B
@@ -569,4 +694,4 @@ if __name__ == u"__main__":
     print 'precise is: ' + str(precise) + '%'
     print 'recall is:  ' + str(recall) + '%'
     print '100*F is        ' + str(F)
-
+    # endregion

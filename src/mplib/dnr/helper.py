@@ -1,7 +1,6 @@
 # coding: utf-8
 # __author__: u"John"
 import pandas as pd
-from pandas import DataFrame
 import pickle
 
 
@@ -40,6 +39,7 @@ def export_to_excel(data_list, file_name, column_head):
     writer.close()
     return
 
+# 导出txt文件
 def export_to_txt(data_list,file_name,column_head):
     df = pd.DataFrame(data_list,columns=column_head)
     df.to_csv(file_name, header=None,encoding=u'utf-8', index=None, sep='\t', mode='w')
