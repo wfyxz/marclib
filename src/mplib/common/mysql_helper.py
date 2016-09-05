@@ -13,7 +13,7 @@ def db_cursor(host, user, passwd, db, port=3306, charset=u"utf8"):
     return cursor
 
 
-class MySQLdb(object):
+class MPMySQL(object):
 
     def __init__(self, host, user, passwd, db, port=3306, charset=u"utf8"):
         self.host = host

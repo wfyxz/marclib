@@ -2,20 +2,8 @@
 # __author__: u"John"
 from __future__ import with_statement
 from os import path
+from mplib.common.base_class import AttributeDict
 import re
-
-
-# region 属性访问定义——字典后接'.' + key名，即可得到字典中key对应的内容
-class AttributeDict(dict):
-    """
-    能够把dict的key当作class的attribute
-    """
-    def __getattr__(self, attr):
-        return self[attr]
-
-    def __setattr__(self, attr, value):
-        self[attr] = value
-# endregion
 
 
 # region 可复用基本类 可以得到文件名，文件拓展，还有一个加序号的方法
@@ -32,7 +20,7 @@ class BaseReducer(object):
         self.file_extension = None  # 当前文件的扩展名
         self.export_name = None  # 导出文件的命名
         self.export_head = None  # 导出文件的列名
-        self.id_column_cclean_index = None  # 指定需要处理的列索引号，起始号为0
+        self.id_column_clean_index = None  # 指定需要处理的列索引号，起始号为0
         self.data_column_clean_index = None  # 数据有效列标志位
         self.keywords_list = []  # 关键词词库
         self.current_keywords = None  # 正在使用的关键词或正则表达式
