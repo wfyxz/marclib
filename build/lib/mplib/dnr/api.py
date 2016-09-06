@@ -271,7 +271,7 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
     print ur'Cleaning data done!'
 
 if __name__ == u"__main__":
-    find_clean_data(data_path=ur"D:\WorkSpace\Data\data_sample.txt", save_file_path=u"D:\WorkSpace\Data",
+    find_clean_data(data_path=ur"D:\WorkSpace\Data\data_sample2.txt", save_file_path=u"D:\WorkSpace\Data",
                     solutions=ur'keywords', content_index=2, sources_index=3, header=False,)
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
     #                  )

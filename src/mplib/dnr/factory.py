@@ -21,7 +21,7 @@ class BaseReducer(object):
         self.export_name = None  # 导出文件的命名
         self.export_head = None  # 导出文件的列名
         self.id_column_clean_index = None  # 指定需要处理的列索引号，起始号为0
-        self.data_column_clean_index = None  # 数据有效列标志位
+        self.data_column_index = None  # 数据有效列标志位
         self.keywords_list = []  # 关键词词库
         self.current_keywords = None  # 正在使用的关键词或正则表达式
         self.result_list = []  # 匹配到关键词的水帖列表，用于关键词正确性检验
@@ -164,7 +164,7 @@ class KeywordsReducer(BaseReducer):
         self.count_list = [0] * len(self.keywords_list)
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_clean_index]
+            self.current_string = string[self.data_column_index]
             hit = False
             # for keywords in self.keywords_list:
             for keywords_index in range(0, len(self.keywords_list)):
@@ -287,7 +287,7 @@ class TagsReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_clean_index]
+            self.current_string = string[self.data_column_index]
             self.tags_finder()
             if self.current_result:
                 self.clean_index.append(index)
@@ -383,7 +383,7 @@ class NumbersReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_clean_index]
+            self.current_string = string[self.data_column_index]
             self.number_finder()
             if self.current_result:
                 self.clean_index.append(index)
@@ -482,7 +482,7 @@ class AbnormalReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_clean_index]
+            self.current_string = string[self.data_column_index]
             self.abnormal_finder()
             if self.current_result:
                 self.clean_index.append(index)
@@ -607,7 +607,7 @@ class SourcesReducer(BaseReducer):
         self.count_list = [0] * len(self.keywords_list)
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_clean_index]
+            self.current_string = string[self.data_column_index]
             self.sources_finder()
             if self.current_result:
                 self.clean_index.append(index)
@@ -632,11 +632,11 @@ if __name__ == u"__main__":
     kr.has_header = False
     kr.show_process = False
     kr.use_hot_tags = False
-    kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample.txt"
-    kr.data_column_clean_index = 2
+    kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample2.txt"
+    kr.data_column_index = 2
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
 
-    kr.data_column_clean_index = 3
+    kr.data_column_index = 3
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
 
     try:

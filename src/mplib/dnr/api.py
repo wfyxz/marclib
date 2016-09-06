@@ -147,7 +147,7 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
                     sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
                     min_char=10, max_symbol=5,):
     if isinstance(solutions, str) or isinstance(solutions, unicode):
-        cur_solution = solutions.decode('utf=8')
+        cur_solution = solutions.decode('utf-8')
         if cur_solution == ur'keywords':
             keywords_splitter(data_path=data_path,
                               keywords_path=keyword_path,
@@ -189,7 +189,7 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
             if solutions_index == 0:
                 data_path = data_path
                 name = solutions[solutions_index]
-                cur_solution = name.decode('utf=8')
+                cur_solution = name.decode('utf-8')
                 if cur_solution == ur'keywords':
                     keywords_splitter(data_path=data_path,
                                       keywords_path=keyword_path,
@@ -228,7 +228,7 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
             else:
                 data_path = save_file_path+r'\clean_data.txt'
                 name = solutions[solutions_index]
-                cur_solution = name.decode('utf=8')
+                cur_solution = name.decode('utf-8')
                 if cur_solution == ur'keywords':
                     keywords_splitter(data_path=data_path,
                                       keywords_path=keyword_path,
@@ -272,7 +272,7 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
 
 if __name__ == u"__main__":
     find_clean_data(data_path=ur"D:\WorkSpace\Data\data_sample.txt", save_file_path=u"D:\WorkSpace\Data",
-                    solutions=ur'keywords', content_index=2, sources_index=3, header=False,)
+                    solutions=[ur'keywords', ur'tags', ur'sources'], content_index=2, sources_index=3, header=False,)
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
     #                  )
     # tags_splitter(data_path=ur"D:\WorkSpace\Data\sources_data_clean.txt",
