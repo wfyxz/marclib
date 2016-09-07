@@ -256,16 +256,22 @@ class TagsReducer(BaseReducer):
 
     def get_tags(self):
         if self.current_string:
-            tags_num = 0
-
+            tags_char_num = 0
+            # 匹配#热门话题#
             seg_list = re.findall(ur'#.*?#', self.current_string)
+            # 匹配【】
             seg_list2 = re.findall(ur'【.*?】|★|◆', self.current_string)
+            # 匹配[表情]
+            seg_list3 = re.findall(ur'\[.*?]', self.current_string)
+            # 标签数=#热门话题# + 【】*阈值 ，出现【】即判为垃圾
             tags = len(seg_list) + len(seg_list2)*self.tags
             for seg in seg_list:
-                tags_num += len(re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", seg))
+                tags_char_num += len(re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", seg))
+            for seg3 in seg_list3:
+                tags_char_num += len(re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", seg3))
 
             char_list = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
-            char_num = len(char_list) - tags_num
+            char_num = len(char_list) - tags_char_num
 
             return tags, char_num
 
@@ -276,7 +282,7 @@ class TagsReducer(BaseReducer):
         """
         tags, char_num = self.get_tags()
 
-        self.current_result = char_num >= self.numbers and tags < self.tags
+        self.current_result = char_num >= self.numbers and tags <= self.tags
         return
 
     def main(self):
@@ -625,8 +631,8 @@ class SourcesReducer(BaseReducer):
 if __name__ == u"__main__":
     # kr = AbnormalReducer()
     # kr = KeywordsReducer()
-    kr = SourcesReducer()
-    # kr = TagsReducer()
+    # kr = SourcesReducer()
+    kr = TagsReducer()
     # kr = NumbersReducer()
     kr.numbers = 10
     kr.has_header = False
@@ -636,8 +642,8 @@ if __name__ == u"__main__":
     kr.data_column_index = 2
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
 
-    kr.data_column_index = 3
-    kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
+    # kr.data_column_index = 3
+    # kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
 
     try:
         kr.main()
