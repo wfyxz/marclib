@@ -119,6 +119,28 @@ def abnormal_splitter(data_path, abnormal_number=5, index=2, save_file_path=u"D:
     return
 
 
+def series_splitter(data_path, index=2, save_file_path=u"D:\WorkSpace\Data", header=False):
+    series_reducer = SeriesReducer()
+    series_reducer.data_column_index = index
+    series_reducer.current_data_abspath = data_path
+    series_reducer.header = header
+    try:
+        series_reducer.main()
+        if series_reducer.trash_list:
+            filename = save_file_path + u'\\' + u'series_data_trash.txt'
+            export_to_txt(data_list=series_reducer.trash_list,
+                          file_name=filename,
+                          column_head=None)
+        if series_reducer.cleaned_list:
+            filename = save_file_path + u'\\' + u'clean_data.txt'
+            export_to_txt(data_list=series_reducer.cleaned_list,
+                          file_name=filename,
+                          column_head=None)
+    except Exception as e:
+        print str(e)
+    return
+
+
 def sources_splitter(data_path, sources_path, index=3, save_file_path=u"D:\WorkSpace\Data", header=False):
     keywords_reducer = SourcesReducer()
     keywords_reducer.data_column_index = index
@@ -183,6 +205,12 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
                              save_file_path=save_file_path,
                              header=header,
                              )
+        if cur_solution == ur'series':
+            series_splitter(data_path=data_path,
+                            index=content_index,
+                            save_file_path=save_file_path,
+                            header=header,
+                            )
     if isinstance(solutions, list):
         for solutions_index in range(len(solutions)):
             start_time = datetime.datetime.now()
@@ -225,21 +253,28 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
                                      save_file_path=save_file_path,
                                      header=header,
                                      )
+                if cur_solution == ur'series':
+                    series_splitter(data_path=data_path,
+                                    index=content_index,
+                                    save_file_path=save_file_path,
+                                    header=header,
+                                    )
             else:
                 data_path = save_file_path+r'\clean_data.txt'
                 name = solutions[solutions_index]
                 cur_solution = name.decode('utf-8')
+                # 没有表头
                 if cur_solution == ur'keywords':
                     keywords_splitter(data_path=data_path,
                                       keywords_path=keyword_path,
-                                      save_file_path=u"D:\WorkSpace\Data",
+                                      save_file_path=save_file_path,
                                       index=content_index,
-                                      header=header,
+                                      header=False,
                                       )
                 if cur_solution == ur'tags':
                     tags_splitter(data_path=data_path,
                                   min_number=min_char,
-                                  save_file_path=u"D:\WorkSpace\Data",
+                                  save_file_path=save_file_path,
                                   index=content_index,
                                   header=False,
                                   )
@@ -264,6 +299,12 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
                                      save_file_path=save_file_path,
                                      header=False,
                                      )
+                if cur_solution == ur'series':
+                    series_splitter(data_path=data_path,
+                                    index=content_index,
+                                    save_file_path=save_file_path,
+                                    header=False,
+                                    )
             end_time = datetime.datetime.now()
             interval = (end_time - start_time).seconds
             print '' + solutions[solutions_index] + ur' Done!'
@@ -271,8 +312,9 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data", solutions=ur
     print ur'Cleaning data done!'
 
 if __name__ == u"__main__":
-    find_clean_data(data_path=ur"D:\WorkSpace\Data\data_sample.txt", save_file_path=u"D:\WorkSpace\Data",
-                    solutions=[ur'keywords', ur'tags', ur'sources'], content_index=2, sources_index=3, header=False,)
+    find_clean_data(data_path=ur"D:\WorkSpace\Data\data_sample2.txt", save_file_path=u"D:\WorkSpace\Data",
+                    solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
+                    content_index=2, sources_index=3, header=False,)
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
     #                  )
     # tags_splitter(data_path=ur"D:\WorkSpace\Data\sources_data_clean.txt",

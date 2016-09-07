@@ -282,7 +282,7 @@ class TagsReducer(BaseReducer):
         """
         tags, char_num = self.get_tags()
 
-        self.current_result = char_num >= self.numbers and tags <= self.tags
+        self.current_result = char_num >= self.numbers and tags < self.tags
         return
 
     def main(self):
@@ -456,12 +456,12 @@ class AbnormalReducer(BaseReducer):
             """
         try:
             char_list = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
-            match = re.findall(ur"[^—@~:：?!！/ ,，.\[\]()（）\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]", 
+            match = re.findall(ur"[^—@~:：?!！/ ,，.\[\]()（）\dA-Za-z\u3007\u4E00-\u9FCB\uE815-\uE864]",
                                self.current_string)
         except Exception as e:
             self.current_error = str(e)
             self.code_message.code = 3
-            self.code_message.message = u"number_finder re.find error"
+            self.code_message.message = u"abnormal_finder re.find error"
             self.error_list.append(self.current_error)
             self.current_result = []
         else:
@@ -490,6 +490,101 @@ class AbnormalReducer(BaseReducer):
             string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
             self.abnormal_finder()
+            if self.current_result:
+                self.clean_index.append(index)
+                self.cleaned_list.append(string)
+            else:
+                self.trash_index.append(index)
+                self.trash_list.append(string)
+
+        # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
+        # self.raw_list = None
+        # self.keywords_list = None
+        return
+# endregion
+
+
+# region 序列去水
+class SeriesReducer(BaseReducer):
+    """
+    利用异常字符种数去水的工具，数字暂定为5
+    """
+    def __init__(self):
+        BaseReducer.__init__(self)
+
+    def get_contents(self):
+        """
+        可以通过外部赋值设置值，也可以通过别的方法实现
+        数据库的操作后将数据赋值给 self.raw_list
+        :return:
+        """
+        if self.raw_list:
+            return
+        else:
+            pass
+        if self.current_data_abspath:
+            self.file_extension = self.get_file_extension(self.current_data_abspath)
+            self.export_name = self.get_file_name(self.current_data_abspath)
+            if self.file_extension == u"txt":
+                try:
+                    f = open(self.current_data_abspath, u"rb")
+                    # 2进制模式打开
+                except IOError as e:
+                    self.current_error = str(e)
+                    self.code_message.code = 1
+                    self.code_message.message = u"get_contents open(file) IOError"
+                    self.error_list.append(self.current_error)
+                else:
+                    with f:
+                        if self.has_header:
+                            f.readline()
+                        for line in f:
+                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
+                            self.raw_list.append(tuple(line))
+                        self.code_message.message = u"data file import successfully"
+        else:
+            self.raw_list = [(1, u"关键%词1"), (2, u"1这是%一%个正2"), (3, u"这2%是一个藏得很深%的2水贴，你检测%不3出来"),
+                             (4, u"1%则%4表达%2式6%呢")]
+        return
+
+    def series_finder(self):
+        """
+            python的正则表达式可以直接支持中文
+            :return:
+            """
+        try:
+            pattern = re.compile(u'[1-9][.|:|、][\u3007\u4E00-\u9FCB\uE815-\uE864]|[\u2460-\u2469]')
+            series_list = re.findall(pattern, self.current_string)
+
+        except Exception as e:
+            self.current_error = str(e)
+            self.code_message.code = 3
+            self.code_message.message = u"series_finder re.find error"
+            self.error_list.append(self.current_error)
+            self.current_result = []
+        else:
+            series_length = len(series_list)
+            self.current_result = series_length <= 2
+        if self.show_process:
+            if self.current_result:
+                print u"含有的序号个数小于\n{0}".format(2)
+            else:
+                # print u"没有匹配\n{0}".format(self.abnormal)
+                pass
+        else:
+            pass
+        return
+
+    def main(self):
+        """
+        复杂应用才需要Override这部分
+        :return:
+        """
+        self.get_contents()
+        for index in range(len(self.raw_list)):
+            string = self.raw_list[index]
+            self.current_string = string[self.data_column_index]
+            self.series_finder()
             if self.current_result:
                 self.clean_index.append(index)
                 self.cleaned_list.append(string)
@@ -632,8 +727,9 @@ if __name__ == u"__main__":
     # kr = AbnormalReducer()
     # kr = KeywordsReducer()
     # kr = SourcesReducer()
-    kr = TagsReducer()
+    # kr = TagsReducer()
     # kr = NumbersReducer()
+    kr = SeriesReducer()
     kr.numbers = 10
     kr.has_header = False
     kr.show_process = False
