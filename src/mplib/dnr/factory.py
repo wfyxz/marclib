@@ -727,14 +727,14 @@ if __name__ == u"__main__":
     # kr = AbnormalReducer()
     # kr = KeywordsReducer()
     # kr = SourcesReducer()
-    # kr = TagsReducer()
+    kr = TagsReducer()
     # kr = NumbersReducer()
-    kr = SeriesReducer()
+    # kr = SeriesReducer()
     kr.numbers = 10
     kr.has_header = False
     kr.show_process = False
     kr.use_hot_tags = False
-    kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample2.txt"
+    kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample.txt"
     kr.data_column_index = 2
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
 
@@ -753,25 +753,25 @@ if __name__ == u"__main__":
     print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
     print u'去水率 ' + str(float(len(kr.raw_list) - len(kr.cleaned_list)) / len(kr.raw_list) * 100) + u'%'
 
-    # region 数据测试
+    # region 1000条人工标注数据data_sample的测试
     clean_index = [3, 4, 26, 29, 33, 42, 55, 62, 70, 80, 83, 100, 109, 113, 119, 121, 171, 204, 261, 284, 290, 349,
                    385, 397, 415, 421, 435, 551, 590, 615, 618, 771, 778, 781, 793, 843, 963, 965, 972]
 
-    B = 0
+    A = 0
     for i in kr.trash_index:
-        if (int(i) + 1) in clean_index:
-            B += 1
-            print i
+        if (int(i) + 1) not in clean_index:
+            A += 1
+        else:
             print kr.raw_list[i][2]
             print kr.raw_list[i][3]
 
-    A = 0
+    C = 0
     for i in kr.clean_index:
-        if (int(i) + 1) in clean_index:
-            A += 1
+        if (int(i) + 1) not in clean_index:
+            C += 1
 
-    D = len(kr.raw_list) - len(kr.cleaned_list) - B
-    C = len(kr.cleaned_list) - A
+    B = len(kr.raw_list) - len(kr.cleaned_list) - A
+    D = len(kr.cleaned_list) - C
     if A + B != 0:
         precise = A / float(A + B) * 100
     else:
@@ -781,12 +781,12 @@ if __name__ == u"__main__":
     else:
         recall = 0
     if precise + recall != 0:
-        F = precise * recall / (precise + recall)
+        F = precise * recall / (precise + recall) / 100
     else:
         F = 0
     print 'AB is:      ' + str(A) + ' ' + str(B)
     print 'CD is:      ' + str(C) + ' ' + str(D)
     print 'precise is: ' + str(precise) + '%'
     print 'recall is:  ' + str(recall) + '%'
-    print '100*F is        ' + str(F)
+    print 'F is        ' + str(F)
     # endregion
