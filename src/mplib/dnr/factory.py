@@ -36,6 +36,7 @@ class BaseReducer(object):
         self.has_header = False  # 读入的数据是否有表头
         self.clean_index = []
         self.trash_index = []
+        self.save_file_path = ''
         return
 
     @staticmethod
