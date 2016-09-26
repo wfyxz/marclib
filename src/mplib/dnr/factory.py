@@ -726,14 +726,14 @@ class SourcesReducer(BaseReducer):
 
 if __name__ == u"__main__":
     # kr = AbnormalReducer()
-    # kr = KeywordsReducer()
+    kr = KeywordsReducer()
     # kr = SourcesReducer()
-    kr = TagsReducer()
+    # kr = TagsReducer()
     # kr = NumbersReducer()
     # kr = SeriesReducer()
     kr.numbers = 10
     kr.has_header = False
-    kr.show_process = False
+    kr.show_process = True
     kr.use_hot_tags = False
     kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample.txt"
     kr.data_column_index = 2

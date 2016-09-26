@@ -507,7 +507,7 @@ def find_clean_data2(data_path, save_file_path=u"D:\WorkSpace\Data",
 
 
 if __name__ == u"__main__":
-    find_clean_data2(data_path=ur"D:\WorkSpace\Data\data_sample2.txt", save_file_path=u"D:\WorkSpace\Data",
+    find_clean_data2(data_path=ur"D:\WorkSpace\Data\data_sample_all.txt", save_file_path=u"D:\WorkSpace\Data",
                      solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
                      content_index=2, sources_index=3, header=False,)
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
@@ -516,12 +516,12 @@ if __name__ == u"__main__":
     #                  )
     # abnormal_splitter(data_path=ur"D:\WorkSpace\Data\numbers_data_clean.txt",
     #                   )
-    # keywords_splitter(data_path=ur"D:\WorkSpace\Data\abnormal_data_clean.txt",
+    # keywords_splitter(data_path=ur"D:\WorkSpace\Data\data_sample.txt",
     #                   keywords_path=ur"D:\WorkSpace\Data\keywords.txt",
     #                   index=2, one_hit=False)
-    # keywords_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
+    # keywords_splitter(data_path=ur"D:\WorkSpace\Data\test_data.txt",
     #                   keywords_path=ur"D:\WorkSpace\Data\keywords.txt",
     #                   index=2, one_hit=False)
-    # sources_splitter(data_path=ur"D:\WorkSpace\Data\keywords_data_clean.txt",
-    #                   sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
-    #                   index=3)
+    # sources_splitter(data_path=ur"D:\WorkSpace\Data\clean_data.txt",
+    #                  sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
+    #                  index=3)
