@@ -724,28 +724,25 @@ class SourcesReducer(BaseReducer):
         return
 # endregion
 
+
 if __name__ == u"__main__":
     # kr = AbnormalReducer()
-    kr = KeywordsReducer()
-    # kr = SourcesReducer()
+    # kr = KeywordsReducer()
+    kr = SourcesReducer()
     # kr = TagsReducer()
     # kr = NumbersReducer()
     # kr = SeriesReducer()
     kr.numbers = 10
     kr.has_header = False
-    kr.show_process = True
-    kr.use_hot_tags = False
+    # kr.show_process = True
     kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample.txt"
     kr.data_column_index = 2
     kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
 
-    # kr.data_column_index = 3
-    # kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
+    kr.data_column_index = 3
+    kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
 
-    try:
-        kr.main()
-    except Exception as exc:
-        print str(exc)
+    kr.main()
 
     print u"{0}统计信息{0}".format(u"-" * 30)
     print u'共有微博 ' + str(len(kr.raw_list))

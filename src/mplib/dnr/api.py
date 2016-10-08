@@ -322,10 +322,10 @@ def keywords_splitter2(**parameter_diction):
     keywords_reducer.save_file_path = parameter_diction['save_file_path']
     try:
         keywords_reducer.main()
-        if keywords_reducer.trash_list:
+        if parameter_diction['save_file_path'] and keywords_reducer.trash_list:
             filename = keywords_reducer.save_file_path + u'\\' + u'keywords_data_trash.txt'
             export_to_txt(data_list=keywords_reducer.trash_list, file_name=filename, column_head=None)
-        if keywords_reducer.cleaned_list:
+        if parameter_diction['save_file_path'] and keywords_reducer.cleaned_list:
             # export_to_excel(data_list=keywords_reducer.cleaned_list,
             #                 file_name=u"data_clean.xlsx",
             #                 column_head=None)
@@ -347,12 +347,12 @@ def numbers_splitter2(**parameter_diction):
     numbers_reducer.save_file_path = parameter_diction['save_file_path']
     try:
         numbers_reducer.main()
-        if numbers_reducer.trash_list:
+        if parameter_diction['save_file_path'] and numbers_reducer.trash_list:
             filename = numbers_reducer.save_file_path + u'\\' + u'numbers_data_trash.txt'
             export_to_txt(data_list=numbers_reducer.trash_list,
                           file_name=filename,
                           column_head=None)
-        if numbers_reducer.cleaned_list:
+        if parameter_diction['save_file_path'] and numbers_reducer.cleaned_list:
             filename = numbers_reducer.save_file_path + u'\\' + u'clean_data.txt'
             export_to_txt(data_list=numbers_reducer.cleaned_list,
                           file_name=filename,
@@ -371,12 +371,12 @@ def tags_splitter2(**parameter_diction):
     tags_reducer.save_file_path = parameter_diction['save_file_path']
     try:
         tags_reducer.main()
-        if tags_reducer.trash_list:
+        if parameter_diction['save_file_path'] and tags_reducer.trash_list:
             filename = tags_reducer.save_file_path + u'\\' + u'tags_data_trash.txt'
             export_to_txt(data_list=tags_reducer.trash_list,
                           file_name=filename,
                           column_head=None)
-        if tags_reducer.cleaned_list:
+        if parameter_diction['save_file_path'] and tags_reducer.cleaned_list:
             filename = tags_reducer.save_file_path + u'\\' + u'clean_data.txt'
             export_to_txt(data_list=tags_reducer.cleaned_list,
                           file_name=filename,
@@ -389,18 +389,18 @@ def tags_splitter2(**parameter_diction):
 def abnormal_splitter2(**parameter_diction):
     abnormal_reducer = AbnormalReducer()
     abnormal_reducer.data_column_index = parameter_diction['content_index']
-    abnormal_reducer.abnormal = parameter_diction['abnormal_number']
+    abnormal_reducer.abnormal = parameter_diction['max_symbol']
     abnormal_reducer.current_data_abspath = parameter_diction['data_path']
     abnormal_reducer.header = parameter_diction['header']
     abnormal_reducer.save_file_path = parameter_diction['save_file_path']
     try:
         abnormal_reducer.main()
-        if abnormal_reducer.trash_list:
+        if parameter_diction['save_file_path'] and abnormal_reducer.trash_list:
             filename = abnormal_reducer.save_file_path + u'\\' + u'abnormal_data_trash.txt'
             export_to_txt(data_list=abnormal_reducer.trash_list,
                           file_name=filename,
                           column_head=None)
-        if abnormal_reducer.cleaned_list:
+        if parameter_diction['save_file_path'] and abnormal_reducer.cleaned_list:
             filename = abnormal_reducer.save_file_path + u'\\' + u'clean_data.txt'
             export_to_txt(data_list=abnormal_reducer.cleaned_list,
                           file_name=filename,
@@ -418,12 +418,12 @@ def series_splitter2(**parameter_diction):
     series_reducer.save_file_path = parameter_diction['save_file_path']
     try:
         series_reducer.main()
-        if series_reducer.trash_list:
+        if parameter_diction['save_file_path'] and series_reducer.trash_list:
             filename = series_reducer.save_file_path + u'\\' + u'series_data_trash.txt'
             export_to_txt(data_list=series_reducer.trash_list,
                           file_name=filename,
                           column_head=None)
-        if series_reducer.cleaned_list:
+        if parameter_diction['save_file_path'] and series_reducer.cleaned_list:
             filename = series_reducer.save_file_path + u'\\' + u'clean_data.txt'
             export_to_txt(data_list=series_reducer.cleaned_list,
                           file_name=filename,
@@ -442,10 +442,10 @@ def sources_splitter2(**parameter_diction):
     keywords_reducer.save_file_path = parameter_diction['save_file_path']
     try:
         keywords_reducer.main()
-        if keywords_reducer.trash_list:
+        if parameter_diction['save_file_path'] and keywords_reducer.trash_list:
             filename = keywords_reducer.save_file_path + u'\\' + u'sources_data_trash.txt'
             export_to_txt(data_list=keywords_reducer.trash_list, file_name=filename, column_head=None)
-        if keywords_reducer.cleaned_list:
+        if parameter_diction['save_file_path'] and keywords_reducer.cleaned_list:
             # export_to_excel(data_list=keywords_reducer.cleaned_list,
             #                 file_name=u"data_clean.xlsx",
             #                 column_head=None)
@@ -506,8 +506,45 @@ def find_clean_data2(data_path, save_file_path=u"D:\WorkSpace\Data",
         print ur'Cleaning data done!'
 
 
+def find_clean_data3(data_path, save_file_path=u"D:\WorkSpace\Data",
+                     solutions=ur'keywords',
+                     content_index=2, sources_index=3,
+                     header=True, keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
+                     sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
+                     min_char=10, max_symbol=5, ):
+
+    if isinstance(solutions, list):
+        test_classifier = solutions
+    else:
+        test_classifier = [solutions]
+    classifiers = {
+        'keywords': keywords_splitter2,
+        'tags': tags_splitter2,
+        'sources': sources_splitter2,
+        'series': series_splitter2,
+        'numbers': numbers_splitter2,
+        'abnomal': abnormal_splitter2,
+    }
+
+    for classifier_index in range(len(test_classifier)):
+        starttime = datetime.datetime.now()
+        classifier = test_classifier[classifier_index]
+        if classifier_index == 0:
+            classifiers[classifier](data_path=data_path, save_file_path=save_file_path,
+                                    content_index=content_index, sources_index=sources_index,
+                                    header=header, keyword_path=keyword_path,
+                                    sources_path=sources_path, min_char=min_char, max_symbol=max_symbol,)
+        else:
+            classifiers[classifier](data_path=save_file_path + r'\clean_data.txt', save_file_path=save_file_path,
+                                    content_index=content_index, sources_index=sources_index,
+                                    header=False, keyword_path=keyword_path,
+                                    sources_path=sources_path, min_char=min_char, max_symbol=max_symbol,)
+        endtime = datetime.datetime.now()
+        interval = endtime - starttime
+        print ur'Cleaning data done! Time cost: ', interval
+
 if __name__ == u"__main__":
-    find_clean_data2(data_path=ur"D:\WorkSpace\Data\data_sample_all.txt", save_file_path=u"D:\WorkSpace\Data",
+    find_clean_data3(data_path=ur"D:\WorkSpace\Data\data_sample.txt", save_file_path=u"D:\WorkSpace\Data",
                      solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
                      content_index=2, sources_index=3, header=False,)
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
