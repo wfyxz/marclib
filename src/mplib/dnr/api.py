@@ -208,13 +208,13 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data",
         print ur'Cleaning data done! Time cost: ', interval
 
 if __name__ == u"__main__":
-    # find_clean_data(data_path=ur"D:\WorkSpace\Data\WeiboData\1\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
-    #                 solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
-    #                 data_index_name='text', sources_index_name='source', has_header=True,)
-    find_clean_data(data_path=ur"D:\WorkSpace\Data\虎扑---帖1.txt", keyword_path=ur"D:\workspace\Data\通用词库",
-                    save_file_path=u"D:\WorkSpace\Data",
-                    solutions=[ur'tagging', ur'numbers'],
-                    data_index_name='Content', has_header=True)
+    find_clean_data(data_path=ur"D:\WorkSpace\Data\WeiboData\1\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
+                    solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
+                    data_index_name=2, sources_index_name=3, has_header=False)
+    # find_clean_data(data_path=ur"D:\WorkSpace\Data\虎扑---帖1.txt", keyword_path=ur"D:\workspace\Data\通用词库",
+    #                 save_file_path=u"D:\WorkSpace\Data",
+    #                 solutions=[ur'tagging', ur'numbers'],
+    #                 data_index_name='Content', has_header=True)
 
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
     #                  )

@@ -95,6 +95,9 @@ class BaseReducer(object):
                         if self.has_header:
                             self.header = f.readline().decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.data_column_index = self.header.index(self.data_column_name)
+                        else:
+                            self.header = None
+                            self.data_column_index = self.data_column_name
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
