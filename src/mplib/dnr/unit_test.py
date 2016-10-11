@@ -48,11 +48,15 @@ def classify(traindata_filename=ur'D:\workspace\weibo\data\8000条测试数据.x
              'VerifiedReason', 'MutualFollowCount']
 
     filename = newdata_filename
-    with io.open(filename, "r", encoding='utf-8') as f:
-        # line = f.readline()
-        data = [line.rstrip('\n').rstrip(' ').rstrip('\t').split("\t") for line in f]
-    df = DataFrame(data, columns=names)
-    new_words = [string_preprocess(string) for string in df['Content']]
+    try:
+        with io.open(filename, "r", encoding='utf-8') as f:
+            # line = f.readline()
+            data = [line.rstrip('\n').rstrip(' ').rstrip('\t').split("\t") for line in f]
+    except:
+        return datetime.timedelta(0)
+    else:
+        df = DataFrame(data, columns=names)
+        new_words = [string_preprocess(string) for string in df['Content']]
 
     # 从文件导入停用词表
     with io.open(stopwords_filename, 'r', encoding='utf-8') as f:
@@ -146,7 +150,7 @@ if __name__ == u"__main__":
     times = [datetime.timedelta(0)]*5
     length = float(len(names))
 
-    for name in names[:5]:
+    for name in names[221:]:
         data = path + '\\' + name + ur'\weibo1.txt'
         savefile = path + '\\' + name
         print 'Processing: ', data

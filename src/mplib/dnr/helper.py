@@ -44,7 +44,7 @@ def export_to_excel(data_list, file_name, column_head):
 # 导出txt文件
 def export_to_txt(data_list, file_name, column_head):
     df = pd.DataFrame(data_list, columns=column_head)
-    df.to_csv(file_name, header=None, encoding=u'utf-8', index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
+    df.to_csv(file_name, encoding=u'utf-8', index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
     return
 
 

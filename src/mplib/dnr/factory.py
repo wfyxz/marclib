@@ -1,9 +1,15 @@
 # coding: utf-8
 # __author__: u"John"
-from __future__ import with_statement
+from __future__ import division
 from os import path
 from mplib.common.base_class import AttributeDict
 import re
+from tqdm import tqdm
+from marclearn.tools.tagging import tagging
+from glob import glob
+from pandas import DataFrame,Series
+import pandas as pd
+import io
 
 
 # region 可复用基本类 可以得到文件名，文件拓展，还有一个加序号的方法
@@ -37,6 +43,8 @@ class BaseReducer(object):
         self.clean_index = []
         self.trash_index = []
         self.save_file_path = ''
+        self.header = ''
+        self.data_column_name = ''
         return
 
     @staticmethod
@@ -59,18 +67,6 @@ class BaseReducer(object):
         for line in xrange(len(data_list)):
             ret.append((line + 1, data_list[line]))
         return ret
-# endregion
-
-
-# region 关键词去水
-class KeywordsReducer(BaseReducer):
-    """
-    利用关键词去水的工具，支持关键词是正则表达式的情况
-    """
-    def __init__(self):
-        BaseReducer.__init__(self)
-        self.one_hit_strategy = False
-        self.count_list = []
 
     def get_contents(self):
         """
@@ -97,16 +93,28 @@ class KeywordsReducer(BaseReducer):
                 else:
                     with f:
                         if self.has_header:
-                            f.readline()
+                            self.header = f.readline().decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
+                            self.data_column_index = self.header.index(self.data_column_name)
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.raw_list.append(tuple(line))
-
                         self.code_message.message = u"data file import successfully"
         else:
-            self.raw_list = [(1, u"关键词"), (2, u"这是一个正"), (3, u"这是一个藏得很深的水贴，你检测不出来"),
-                             (4, u"则表达式呢")]
+            self.raw_list = [(1, u"关键%词1"), (2, u"1这是%一%个正2"), (3, u"这2%是一个藏得很深%的2水贴，你检测%不3出来"),
+                             (4, u"1%则%4表达%2式6%呢")]
         return
+# endregion
+
+
+# region 关键词去水
+class KeywordsReducer(BaseReducer):
+    """
+    利用关键词去水的工具，支持关键词是正则表达式的情况
+    """
+    def __init__(self):
+        BaseReducer.__init__(self)
+        self.one_hit_strategy = True
+        self.count_list = []
 
     def get_keywords(self):
         """
@@ -173,8 +181,7 @@ class KeywordsReducer(BaseReducer):
                 self.current_keywords = keywords
                 self.keywords_finder()
                 if self.current_result:
-                    hit_info = string + (keywords,)
-                    self.trash_list.append(hit_info)
+                    self.trash_list.append(string)
                     self.result_list.append(self.current_result)
                     hit = True
                     self.count_list[keywords_index] += 1
@@ -209,6 +216,48 @@ class KeywordsReducer(BaseReducer):
 # endregion
 
 
+# region 字典去水
+class DictionaryReducer(BaseReducer):
+    """
+    利用关键词去水的工具，支持关键词是正则表达式的情况
+    """
+    def __init__(self):
+        BaseReducer.__init__(self)
+
+    def main(self):
+        """
+        复杂应用才需要Override这部分
+        :return:
+        """
+        self.export_name = self.get_file_name(self.current_data_abspath)
+        tags_dir_path = self.current_dict_abspath + u'\\*'
+        tags = glob(tags_dir_path)
+
+        raw_data = pd.read_csv(self.current_data_abspath, sep='\t', index_col=None, error_bad_lines=False)
+        data = raw_data[self.data_column_name]
+
+        att = tagging(data, tags)
+        
+        is_trash = att.apply(sum, axis=1)
+        # raw_data['is_trash'] = is_trash
+        mask_cleaned = is_trash == 0
+        cleaned = raw_data[mask_cleaned]
+        mask_trash = is_trash == 1
+        trash = raw_data[mask_trash]
+
+        cleaned_file_name = self.save_file_path + r'\clean_data.txt'
+        trash_file_name = self.save_file_path + r'\dictionary_data_trash.txt'
+
+        cleaned.to_csv(cleaned_file_name, encoding="utf-8", sep="\t", index=None)
+        trash.to_csv(trash_file_name, encoding="utf-8", sep="\t", index=None)
+
+        # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
+        # self.raw_list = None
+        # self.keywords_list = None
+        return
+# endregion
+
+
 # region 标签去水
 class TagsReducer(BaseReducer):
     """
@@ -218,42 +267,6 @@ class TagsReducer(BaseReducer):
         BaseReducer.__init__(self)
         self.numbers = 10
         self.tags = 2
-
-    def get_contents(self):
-        """
-        可以通过外部赋值设置值，也可以通过别的方法实现
-        数据库的操作后将数据赋值给 self.raw_list
-        :return:
-        """
-        if self.raw_list:
-            return
-        else:
-            pass
-        if self.current_data_abspath:
-            self.file_extension = self.get_file_extension(self.current_data_abspath)
-            self.export_name = self.get_file_name(self.current_data_abspath)
-            if self.file_extension == u"txt":
-                try:
-                    f = open(self.current_data_abspath, u"rb")
-                    # 2进制模式打开
-                except IOError as e:
-                    self.current_error = str(e)
-                    self.code_message.code = 1
-                    self.code_message.message = u"get_contents open(file) IOError"
-                    self.error_list.append(self.current_error)
-                else:
-                    with f:
-                        if self.has_header:
-                            f.readline()
-                        for line in f:
-                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
-                            self.raw_list.append(tuple(line))
-
-                        self.code_message.message = u"data file import successfully"
-        else:
-            self.raw_list = [(1, u"关键词"), (2, u"这是一个正"), (3, u"这是一个藏得很深的水贴，你检测不出来"),
-                             (4, u"则表达式呢")]
-        return
 
     def get_tags(self):
         if self.current_string:
@@ -312,55 +325,20 @@ class TagsReducer(BaseReducer):
 # region 字数个数去水
 class NumbersReducer(BaseReducer):
     """
-    利用文字个数去水的工具，数字暂定为34
+    利用文字个数去水的工具
     """
     def __init__(self):
         BaseReducer.__init__(self)
-        self.numbers = 8
-
-    def get_contents(self):
-        """
-        可以通过外部赋值设置值，也可以通过别的方法实现
-        数据库的操作后将数据赋值给 self.raw_list
-        :return:
-        """
-        if self.raw_list:
-            return
-        else:
-            pass
-        if self.current_data_abspath:
-            self.file_extension = self.get_file_extension(self.current_data_abspath)
-            self.export_name = self.get_file_name(self.current_data_abspath)
-            if self.file_extension == u"txt":
-                try:
-                    f = open(self.current_data_abspath, u"rb")
-                    # 2进制模式打开
-                except IOError as e:
-                    self.current_error = str(e)
-                    self.code_message.code = 1
-                    self.code_message.message = u"get_contents open(file) IOError"
-                    self.error_list.append(self.current_error)
-                else:
-                    with f:
-                        if self.has_header:
-                            f.readline()
-                        for line in f:
-                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
-                            self.raw_list.append(tuple(line))
-                        self.code_message.message = u"data file import successfully"
-        else:
-            self.raw_list = [(1, u"关键词1"), (2, u"1这是一个正2"), (3, u"这2是一个藏得很深的2水贴，你检测不3出来"),
-                             (4, u"1则4表达2式6呢")]
-        return
+        self.min_numbers = 4
+        self.max_numbers = 500
 
     def number_finder(self):
         """
             python的正则表达式可以直接支持中文
             :return:
             """
-        numbers = []
         try:
-            numbers = re.findall(ur"[\u3007\u4E00-\u9FCB\uE815-\uE864]", self.current_string)
+            number_counts = len(self.current_string)
         except Exception as e:
             self.current_error = str(e)
             self.code_message.code = 3
@@ -368,18 +346,8 @@ class NumbersReducer(BaseReducer):
             self.error_list.append(self.current_error)
             self.current_result = []
         else:
-            number_counts = ''
-            for numbers_index in numbers:
-                number_counts += numbers_index
-            self.current_result = len(number_counts) > self.numbers
-        if self.show_process:
-            if self.current_result == self.numbers:
-                print u"含有的数字个数\n{0}".format(len(numbers))
-            else:
-                # print u"没有匹配\n{0}".format(self.numbers)
-                pass
-        else:
-            pass
+            self.current_result = self.min_numbers < number_counts < self.max_numbers
+
         return
 
     def main(self):
@@ -414,41 +382,6 @@ class AbnormalReducer(BaseReducer):
     def __init__(self):
         BaseReducer.__init__(self)
         self.abnormal = 5
-
-    def get_contents(self):
-        """
-        可以通过外部赋值设置值，也可以通过别的方法实现
-        数据库的操作后将数据赋值给 self.raw_list
-        :return:
-        """
-        if self.raw_list:
-            return
-        else:
-            pass
-        if self.current_data_abspath:
-            self.file_extension = self.get_file_extension(self.current_data_abspath)
-            self.export_name = self.get_file_name(self.current_data_abspath)
-            if self.file_extension == u"txt":
-                try:
-                    f = open(self.current_data_abspath, u"rb")
-                    # 2进制模式打开
-                except IOError as e:
-                    self.current_error = str(e)
-                    self.code_message.code = 1
-                    self.code_message.message = u"get_contents open(file) IOError"
-                    self.error_list.append(self.current_error)
-                else:
-                    with f:
-                        if self.has_header:
-                            f.readline()
-                        for line in f:
-                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
-                            self.raw_list.append(tuple(line))
-                        self.code_message.message = u"data file import successfully"
-        else:
-            self.raw_list = [(1, u"关键%词1"), (2, u"1这是%一%个正2"), (3, u"这2%是一个藏得很深%的2水贴，你检测%不3出来"),
-                             (4, u"1%则%4表达%2式6%呢")]
-        return
 
     def abnormal_finder(self):
         """
@@ -513,41 +446,6 @@ class SeriesReducer(BaseReducer):
     def __init__(self):
         BaseReducer.__init__(self)
 
-    def get_contents(self):
-        """
-        可以通过外部赋值设置值，也可以通过别的方法实现
-        数据库的操作后将数据赋值给 self.raw_list
-        :return:
-        """
-        if self.raw_list:
-            return
-        else:
-            pass
-        if self.current_data_abspath:
-            self.file_extension = self.get_file_extension(self.current_data_abspath)
-            self.export_name = self.get_file_name(self.current_data_abspath)
-            if self.file_extension == u"txt":
-                try:
-                    f = open(self.current_data_abspath, u"rb")
-                    # 2进制模式打开
-                except IOError as e:
-                    self.current_error = str(e)
-                    self.code_message.code = 1
-                    self.code_message.message = u"get_contents open(file) IOError"
-                    self.error_list.append(self.current_error)
-                else:
-                    with f:
-                        if self.has_header:
-                            f.readline()
-                        for line in f:
-                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
-                            self.raw_list.append(tuple(line))
-                        self.code_message.message = u"data file import successfully"
-        else:
-            self.raw_list = [(1, u"关键%词1"), (2, u"1这是%一%个正2"), (3, u"这2%是一个藏得很深%的2水贴，你检测%不3出来"),
-                             (4, u"1%则%4表达%2式6%呢")]
-        return
-
     def series_finder(self):
         """
             python的正则表达式可以直接支持中文
@@ -608,41 +506,6 @@ class SourcesReducer(BaseReducer):
     def __init__(self):
         BaseReducer.__init__(self)
         self.count_list = []
-
-    def get_contents(self):
-        """
-        可以通过外部赋值设置值，也可以通过别的方法实现
-        数据库的操作后将数据赋值给 self.raw_list
-        :return:
-        """
-        if self.raw_list:
-            return
-        else:
-            pass
-        if self.current_data_abspath:
-            self.file_extension = self.get_file_extension(self.current_data_abspath)
-            self.export_name = self.get_file_name(self.current_data_abspath)
-            if self.file_extension == u"txt":
-                try:
-                    f = open(self.current_data_abspath, u"rb")
-                    # 2进制模式打开
-                except IOError as e:
-                    self.current_error = str(e)
-                    self.code_message.code = 1
-                    self.code_message.message = u"get_contents open(file) IOError"
-                    self.error_list.append(self.current_error)
-                else:
-                    with f:
-                        if self.has_header:
-                            f.readline()
-                        for line in f:
-                            line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
-                            self.raw_list.append(tuple(line))
-                        self.code_message.message = u"data file import successfully"
-        else:
-            self.raw_list = [(1, u"关键%词1"), (2, u"1这是%一%个正2"), (3, u"这2%是一个藏得很深%的2水贴，你检测%不3出来"),
-                             (4, u"1%则%4表达%2式6%呢")]
-        return
 
     def get_keywords(self):
         """
@@ -728,63 +591,75 @@ class SourcesReducer(BaseReducer):
 if __name__ == u"__main__":
     # kr = AbnormalReducer()
     # kr = KeywordsReducer()
-    kr = SourcesReducer()
+    # kr = SourcesReducer()
     # kr = TagsReducer()
     # kr = NumbersReducer()
     # kr = SeriesReducer()
-    kr.numbers = 10
-    kr.has_header = False
+    # kr.numbers = 10
     # kr.show_process = True
-    kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample.txt"
-    kr.data_column_index = 2
-    kr.current_dict_abspath = ur"D:\WorkSpace\Data\keywords.txt"
+    # kr.current_data_abspath = ur"D:\WorkSpace\Data\weibodata\1\weibo1.txt"
+    # kr.has_header = True
+    # kr.data_column_index = ur"text"
+    # kr.current_dict_abspath = ur"D:\workspace\Data\keywords.txt"
+    # kr.has_header = False
+    # kr.data_column_index = 2
 
-    kr.data_column_index = 3
-    kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
+    # kr.data_column_index = 3
+    # kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
 
+    # kr.min_numbers = 5
+    # kr.max_numbers = 500
+
+    kr = DictionaryReducer()
+    kr.current_data_abspath = ur"D:\WorkSpace\Data\虎扑---帖1.txt"
+    kr.has_header = True
+    kr.data_column_name = 'Content'
+    kr.current_dict_abspath = ur"D:\workspace\Data\通用词库"
+    kr.save_file_path = ur'D:\WorkSpace\Data'
+    
     kr.main()
 
-    print u"{0}统计信息{0}".format(u"-" * 30)
-    print u'共有微博 ' + str(len(kr.raw_list))
-    print u'水有 ' + str(len(kr.raw_list) - len(kr.cleaned_list)) + u'条'
-    print u'重复水有 ' + str(len(kr.trash_list) - len(kr.raw_list) + len(kr.cleaned_list)) + u'条'
-    print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
-    print u'去水率 ' + str(float(len(kr.raw_list) - len(kr.cleaned_list)) / len(kr.raw_list) * 100) + u'%'
+    # print u"{0}统计信息{0}".format(u"-" * 30)
+    # print u'共有数据 ' + str(len(kr.raw_list))
+    # print u'水有 ' + str(len(kr.raw_list) - len(kr.cleaned_list)) + u'条'
+    # print u'重复水有 ' + str(len(kr.trash_list) - len(kr.raw_list) + len(kr.cleaned_list)) + u'条'
+    # print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
+    # print u'去水率 ' + str(float(len(kr.raw_list) - len(kr.cleaned_list)) / len(kr.raw_list) * 100) + u'%'
 
     # region 1000条人工标注数据data_sample的测试
-    clean_index = [3, 4, 26, 29, 33, 42, 55, 62, 70, 80, 83, 100, 109, 113, 119, 121, 171, 204, 261, 284, 290, 349,
-                   385, 397, 415, 421, 435, 551, 590, 615, 618, 771, 778, 781, 793, 843, 963, 965, 972]
-
-    A = 0
-    for i in kr.trash_index:
-        if (int(i) + 1) not in clean_index:
-            A += 1
-        else:
-            print kr.raw_list[i][2]
-            print kr.raw_list[i][3]
-
-    C = 0
-    for i in kr.clean_index:
-        if (int(i) + 1) not in clean_index:
-            C += 1
-
-    B = len(kr.raw_list) - len(kr.cleaned_list) - A
-    D = len(kr.cleaned_list) - C
-    if A + B != 0:
-        precise = A / float(A + B) * 100
-    else:
-        precise = 0
-    if A + C != 0:
-        recall = A / float(A + C) * 100
-    else:
-        recall = 0
-    if precise + recall != 0:
-        F = precise * recall / (precise + recall) / 100
-    else:
-        F = 0
-    print 'AB is:      ' + str(A) + ' ' + str(B)
-    print 'CD is:      ' + str(C) + ' ' + str(D)
-    print 'precise is: ' + str(precise) + '%'
-    print 'recall is:  ' + str(recall) + '%'
-    print 'F is        ' + str(F)
+    # clean_index = [3, 4, 26, 29, 33, 42, 55, 62, 70, 80, 83, 100, 109, 113, 119, 121, 171, 204, 261, 284, 290, 349,
+    #                385, 397, 415, 421, 435, 551, 590, 615, 618, 771, 778, 781, 793, 843, 963, 965, 972]
+    #
+    # A = 0
+    # for i in kr.trash_index:
+    #     if (int(i) + 1) not in clean_index:
+    #         A += 1
+    #     else:
+    #         print kr.raw_list[i][2]
+    #         print kr.raw_list[i][3]
+    #
+    # C = 0
+    # for i in kr.clean_index:
+    #     if (int(i) + 1) not in clean_index:
+    #         C += 1
+    #
+    # B = len(kr.raw_list) - len(kr.cleaned_list) - A
+    # D = len(kr.cleaned_list) - C
+    # if A + B != 0:
+    #     precise = A / float(A + B) * 100
+    # else:
+    #     precise = 0
+    # if A + C != 0:
+    #     recall = A / float(A + C) * 100
+    # else:
+    #     recall = 0
+    # if precise + recall != 0:
+    #     F = precise * recall / (precise + recall) / 100
+    # else:
+    #     F = 0
+    # print 'AB is:      ' + str(A) + ' ' + str(B)
+    # print 'CD is:      ' + str(C) + ' ' + str(D)
+    # print 'precise is: ' + str(precise) + '%'
+    # print 'recall is:  ' + str(recall) + '%'
+    # print 'F is        ' + str(F)
     # endregion
