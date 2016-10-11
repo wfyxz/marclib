@@ -128,15 +128,15 @@ def series_splitter(**parameter_diction):
     return
 
 
-def dictionary_splitter(**parameter_diction):
-    dictionary_reducer = DictionaryReducer()
-    dictionary_reducer.data_column_name = parameter_diction['data_index_name']
-    dictionary_reducer.current_data_abspath = parameter_diction['data_path']
-    dictionary_reducer.current_dict_abspath = parameter_diction['keyword_path']
-    dictionary_reducer.has_header = parameter_diction['has_header']
-    dictionary_reducer.save_file_path = parameter_diction['save_file_path']
+def tagging_splitter(**parameter_diction):
+    tagging_reducer = TaggingReducer()
+    tagging_reducer.data_column_name = parameter_diction['data_index_name']
+    tagging_reducer.current_data_abspath = parameter_diction['data_path']
+    tagging_reducer.current_dict_abspath = parameter_diction['keyword_path']
+    tagging_reducer.has_header = parameter_diction['has_header']
+    tagging_reducer.save_file_path = parameter_diction['save_file_path']
     try:
-        dictionary_reducer.main()
+        tagging_reducer.main()
     except Exception as e:
         print str(e)
     return
@@ -172,7 +172,7 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data",
                     data_index_name='text', sources_index_name='source',
                     has_header=True, keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
                     sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
-                    min_char=10, max_char=600, max_symbol=5, ):
+                    min_char=4, max_char=600, max_symbol=5, ):
 
     if isinstance(solutions, list):
         test_classifier = solutions
@@ -184,8 +184,8 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data",
         'sources': sources_splitter,
         'series': series_splitter,
         'numbers': numbers_splitter,
-        'abnomal': abnormal_splitter,
-        'dictionary': dictionary_splitter,
+        'abnormal': abnormal_splitter,
+        'tagging': tagging_splitter,
     }
 
     for classifier_index in range(len(test_classifier)):
@@ -208,13 +208,13 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data",
         print ur'Cleaning data done! Time cost: ', interval
 
 if __name__ == u"__main__":
-    find_clean_data(data_path=ur"D:\WorkSpace\Data\WeiboData\1\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
-                    solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
-                    data_index_name='text', sources_index_name='source', has_header=True,)
-    # find_clean_data(data_path=ur"D:\WorkSpace\Data\虎扑---帖1.txt", keyword_path=ur"D:\workspace\Data\通用词库",
-    #                 save_file_path=u"D:\WorkSpace\Data",
-    #                 solutions=[ur'numbers', ur'dictionary'],
-    #                 data_data_index_name='Content', has_header=True)
+    # find_clean_data(data_path=ur"D:\WorkSpace\Data\WeiboData\1\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
+    #                 solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
+    #                 data_index_name='text', sources_index_name='source', has_header=True,)
+    find_clean_data(data_path=ur"D:\WorkSpace\Data\虎扑---帖1.txt", keyword_path=ur"D:\workspace\Data\通用词库",
+                    save_file_path=u"D:\WorkSpace\Data",
+                    solutions=[ur'tagging', ur'numbers'],
+                    data_index_name='Content', has_header=True)
 
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
     #                  )

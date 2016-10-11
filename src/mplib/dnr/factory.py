@@ -39,7 +39,7 @@ class BaseReducer(object):
         self.current_string = None  # 正在处理的字符串
         self.trash_list = []  # 水军数据
         self.cleaned_list = []  # 去水之后的数据
-        self.has_header = False  # 读入的数据是否有表头
+        self.has_header = True  # 读入的数据是否有表头
         self.clean_index = []
         self.trash_index = []
         self.save_file_path = ''
@@ -216,10 +216,10 @@ class KeywordsReducer(BaseReducer):
 # endregion
 
 
-# region 字典去水
-class DictionaryReducer(BaseReducer):
+# region 打标签去水
+class TaggingReducer(BaseReducer):
     """
-    利用关键词去水的工具，支持关键词是正则表达式的情况
+    利用打标签去水的工具
     """
     def __init__(self):
         BaseReducer.__init__(self)
@@ -234,10 +234,16 @@ class DictionaryReducer(BaseReducer):
         tags = glob(tags_dir_path)
 
         raw_data = pd.read_csv(self.current_data_abspath, sep='\t', index_col=None, error_bad_lines=False)
+        # 处理缺失值
+        raw_data = raw_data.ix[raw_data[self.data_column_name].dropna().index, :]
+        # 处理重复值
+        raw_data = raw_data.ix[raw_data[self.data_column_name].drop_duplicates().index, :]
+
+        # 提取文本内容
         data = raw_data[self.data_column_name]
 
         att = tagging(data, tags)
-        
+
         is_trash = att.apply(sum, axis=1)
         # raw_data['is_trash'] = is_trash
         mask_cleaned = is_trash == 0
@@ -258,10 +264,10 @@ class DictionaryReducer(BaseReducer):
 # endregion
 
 
-# region 标签去水
+# region 热门话题去水
 class TagsReducer(BaseReducer):
     """
-    利用#标签#个数，其余字数去水的工具
+    利用#热门话题#个数，以及其余字数个数去水的工具
     """
     def __init__(self):
         BaseReducer.__init__(self)
@@ -329,7 +335,7 @@ class NumbersReducer(BaseReducer):
     """
     def __init__(self):
         BaseReducer.__init__(self)
-        self.min_numbers = 4
+        self.min_numbers = 5
         self.max_numbers = 500
 
     def number_finder(self):
@@ -338,7 +344,8 @@ class NumbersReducer(BaseReducer):
             :return:
             """
         try:
-            number_counts = len(self.current_string)
+            numbers = re.findall(ur"[\u4e00-\u9fa5]", self.current_string)
+            number_counts = len(numbers)
         except Exception as e:
             self.current_error = str(e)
             self.code_message.code = 3
@@ -441,7 +448,7 @@ class AbnormalReducer(BaseReducer):
 # region 序列去水
 class SeriesReducer(BaseReducer):
     """
-    利用异常字符种数去水的工具，数字暂定为5
+    利用序列去水的工具
     """
     def __init__(self):
         BaseReducer.__init__(self)
@@ -501,7 +508,7 @@ class SeriesReducer(BaseReducer):
 # region 客户端去水
 class SourcesReducer(BaseReducer):
     """
-    利用异常字符种数去水的工具，数字暂定为5
+    利用客户端来源去水的工具
     """
     def __init__(self):
         BaseReducer.__init__(self)
@@ -610,7 +617,7 @@ if __name__ == u"__main__":
     # kr.min_numbers = 5
     # kr.max_numbers = 500
 
-    kr = DictionaryReducer()
+    kr = TaggingReducer()
     kr.current_data_abspath = ur"D:\WorkSpace\Data\虎扑---帖1.txt"
     kr.has_header = True
     kr.data_column_name = 'Content'
