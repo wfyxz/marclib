@@ -43,8 +43,14 @@ def export_to_excel(data_list, file_name, column_head):
 
 # 导出txt文件
 def export_to_txt(data_list, file_name, column_head):
+    if len(column_head) > 0:
+        att_head = True
+    else:
+        att_head = False
+        column_head = None
     df = pd.DataFrame(data_list, columns=column_head)
-    df.to_csv(file_name, encoding=u'utf-8', index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
+    df.to_csv(file_name, encoding=u'utf-8', index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE,
+              header=att_head)
     return
 
 

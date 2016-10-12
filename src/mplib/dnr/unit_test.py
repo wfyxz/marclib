@@ -16,7 +16,7 @@ from pandas import DataFrame
 import io
 import csv
 import datetime
-
+from api import find_weibo_data
 
 def string_preprocess(string):
     raw_string = string
@@ -107,64 +107,27 @@ def classify(traindata_filename=ur'D:\workspace\weibo\data\8000条测试数据.x
     return interval
 
 
-def test(data_path=ur"D:\WorkSpace\Data\WeiboData\1\weibo1.txt", save_file_path=ur"D:\WorkSpace\Data\WeiboData\1",
-         solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
-         content_index=2, sources_index=3, header=True,
-         keyword_path=ur"D:\WorkSpace\Data\keywords.txt", sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
-         min_char=10, max_symbol=5, ):
-
-    test_classifier = solutions
-    classifiers = {
-        'keywords': keywords_splitter2,
-        'tags': tags_splitter2,
-        'sources': sources_splitter2,
-        'series': series_splitter2,
-        'numbers': numbers_splitter2,
-        'abnomal': abnormal_splitter2,
-    }
-
-    intervals = []
-    for classifier_index in range(len(test_classifier)):
-        starttime = datetime.datetime.now()
-        classifier = test_classifier[classifier_index]
-        if classifier_index == 0:
-            classifiers[classifier](data_path=data_path, save_file_path=save_file_path,
-                                    content_index=content_index, sources_index=sources_index,
-                                    header=header, keyword_path=keyword_path,
-                                    sources_path=sources_path, min_char=min_char, max_symbol=max_symbol, )
-        else:
-            classifiers[classifier](data_path=save_file_path + r'\clean_data.txt', save_file_path=save_file_path,
-                                    content_index=content_index, sources_index=sources_index,
-                                    header=False, keyword_path=keyword_path,
-                                    sources_path=sources_path, min_char=min_char, max_symbol=max_symbol, )
-        endtime = datetime.datetime.now()
-        interval = endtime - starttime
-        print ur'Cleaning data done! Time cost: ', interval
-        intervals.append(interval)
-
-    return intervals[0], intervals[1], intervals[2], intervals[3]
-
 if __name__ == u"__main__":
     path = ur'D:\workspace\Data\WeiboData'
     names = os.listdir(path)
-    times = [datetime.timedelta(0)]*5
+    times = [datetime.timedelta(0)]*2
     length = float(len(names))
 
-    for name in names[221:]:
+    for name in names[:5]:
         data = path + '\\' + name + ur'\weibo1.txt'
         savefile = path + '\\' + name
         print 'Processing: ', data
         # print savefile
-        keywords_time, tags_time, \
-            sources_time, series_time = test(data_path=data, save_file_path=savefile,
-                                             solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],)
-        times[0] += keywords_time
-        times[1] += tags_time
-        times[2] += sources_time
-        times[3] += series_time
+
+        starttime = datetime.datetime.now()
+        find_weibo_data(data_path=data, save_file_path=savefile,)
+        endtime = datetime.datetime.now()
+        interval = endtime - starttime
+        print ur'Cleaning data done! Time cost: ', interval
+        times[0] += interval
 
         NB_time = classify(newdata_filename=savefile + r'\clean_data.txt', save_file_path=savefile)
-        times[4] += NB_time
+        times[1] += NB_time
 
     outcome = [time.seconds/5.0 for time in times]
 

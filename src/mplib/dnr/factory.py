@@ -75,6 +75,8 @@ class BaseReducer(object):
         :return:
         """
         if self.raw_list:
+            self.data_column_index = self.data_column_name
+            self.header = []
             return
         else:
             pass
@@ -96,11 +98,11 @@ class BaseReducer(object):
                             self.header = f.readline().decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
                             self.data_column_index = self.header.index(self.data_column_name)
                         else:
-                            self.header = None
+                            self.header = []
                             self.data_column_index = self.data_column_name
                         for line in f:
                             line = line.decode(u"utf-8").replace(u"\r", u"").replace(u"\n", u"").split(u"\t")
-                            self.raw_list.append(tuple(line))
+                            self.raw_list.append(line)
                         self.code_message.message = u"data file import successfully"
         else:
             self.raw_list = [(1, u"关键%词1"), (2, u"1这是%一%个正2"), (3, u"这2%是一个藏得很深%的2水贴，你检测%不3出来"),
@@ -236,15 +238,20 @@ class TaggingReducer(BaseReducer):
         tags_dir_path = self.current_dict_abspath + u'\\*'
         tags = glob(tags_dir_path)
 
+        # self.get_contents()
+        # raw_data = DataFrame(self.raw_list, columns=self.header)
+
+        # 读入数据
         raw_data = pd.read_csv(self.current_data_abspath, sep='\t', index_col=None, error_bad_lines=False)
+        self.header = raw_data.columns
         # 处理缺失值
         raw_data = raw_data.ix[raw_data[self.data_column_name].dropna().index, :]
         # 处理重复值
         raw_data = raw_data.ix[raw_data[self.data_column_name].drop_duplicates().index, :]
 
-        # 提取文本内容
+        # 提取文本内容，打标签
+        # data = Series([string.encode('utf-8') for string in raw_data[self.data_column_name]])
         data = raw_data[self.data_column_name]
-
         att = tagging(data, tags)
 
         is_trash = att.apply(sum, axis=1)
@@ -254,11 +261,17 @@ class TaggingReducer(BaseReducer):
         mask_trash = is_trash == 1
         trash = raw_data[mask_trash]
 
-        cleaned_file_name = self.save_file_path + r'\clean_data.txt'
-        trash_file_name = self.save_file_path + r'\dictionary_data_trash.txt'
+        # 转换数据格式
+        cleaned_np_array = cleaned.values
+        trash_np_array = trash.values
+        self.cleaned_list = cleaned_np_array.tolist()
+        self.trash_list = trash_np_array.tolist()
 
-        cleaned.to_csv(cleaned_file_name, encoding="utf-8", sep="\t", index=None)
-        trash.to_csv(trash_file_name, encoding="utf-8", sep="\t", index=None)
+        # cleaned_file_name = self.save_file_path + r'\clean_data.txt'
+        # trash_file_name = self.save_file_path + r'\dictionary_data_trash.txt'
+        #
+        # cleaned.to_csv(cleaned_file_name, encoding="utf-8", sep="\t", index=None)
+        # trash.to_csv(trash_file_name, encoding="utf-8", sep="\t", index=None)
 
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
@@ -609,10 +622,10 @@ if __name__ == u"__main__":
     # kr.show_process = True
     # kr.current_data_abspath = ur"D:\WorkSpace\Data\weibodata\1\weibo1.txt"
     # kr.has_header = True
-    # kr.data_column_index = ur"text"
+    # kr.data_column_name = ur"text"
     # kr.current_dict_abspath = ur"D:\workspace\Data\keywords.txt"
     # kr.has_header = False
-    # kr.data_column_index = 2
+    # kr.data_column_name = 2
 
     # kr.data_column_index = 3
     # kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
@@ -626,15 +639,15 @@ if __name__ == u"__main__":
     kr.data_column_name = 'Content'
     kr.current_dict_abspath = ur"D:\workspace\Data\通用词库"
     kr.save_file_path = ur'D:\WorkSpace\Data'
-    
+
     kr.main()
 
-    # print u"{0}统计信息{0}".format(u"-" * 30)
-    # print u'共有数据 ' + str(len(kr.raw_list))
-    # print u'水有 ' + str(len(kr.raw_list) - len(kr.cleaned_list)) + u'条'
-    # print u'重复水有 ' + str(len(kr.trash_list) - len(kr.raw_list) + len(kr.cleaned_list)) + u'条'
-    # print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
-    # print u'去水率 ' + str(float(len(kr.raw_list) - len(kr.cleaned_list)) / len(kr.raw_list) * 100) + u'%'
+    print u"{0}统计信息{0}".format(u"-" * 30)
+    print u'共有数据 ' + str(len(kr.raw_list))
+    print u'水有 ' + str(len(kr.raw_list) - len(kr.cleaned_list)) + u'条'
+    print u'重复水有 ' + str(len(kr.trash_list) - len(kr.raw_list) + len(kr.cleaned_list)) + u'条'
+    print u'非水有 ' + str(len(kr.cleaned_list)) + u'条'
+    print u'去水率 ' + str(float(len(kr.raw_list) - len(kr.cleaned_list)) / len(kr.raw_list) * 100) + u'%'
 
     # region 1000条人工标注数据data_sample的测试
     # clean_index = [3, 4, 26, 29, 33, 42, 55, 62, 70, 80, 83, 100, 109, 113, 119, 121, 171, 204, 261, 284, 290, 349,
