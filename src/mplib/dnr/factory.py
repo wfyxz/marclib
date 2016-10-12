@@ -4,10 +4,8 @@ from __future__ import division
 from os import path
 from mplib.common.base_class import AttributeDict
 import re
-from tqdm import tqdm
 from marclearn.tools.tagging import tagging
 from glob import glob
-from pandas import DataFrame,Series
 import pandas as pd
 import io
 
@@ -242,8 +240,10 @@ class TaggingReducer(BaseReducer):
         # raw_data = DataFrame(self.raw_list, columns=self.header)
 
         # 读入数据
-        raw_data = pd.read_csv(self.current_data_abspath, sep='\t', index_col=None, error_bad_lines=False)
+        raw_data = pd.read_csv(self.current_data_abspath, sep='\t', index_col=None, error_bad_lines=False,
+                               low_memory=False)
         self.header = raw_data.columns
+        print ur'Data loaded!'
         # 处理缺失值
         raw_data = raw_data.ix[raw_data[self.data_column_name].dropna().index, :]
         # 处理重复值

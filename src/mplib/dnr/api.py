@@ -18,7 +18,7 @@ def keywords_splitter(data=[], **parameter_diction):
         keywords_reducer.main()
         if parameter_diction['save_file_path']:
             if keywords_reducer.trash_list:
-                if not data:
+                if parameter_diction['data_path']:
                     filename = keywords_reducer.save_file_path + u'\\' + u'keywords_data_trash.txt'
                     export_to_txt(data_list=keywords_reducer.trash_list, file_name=filename,
                                   column_head=keywords_reducer.header)
@@ -50,7 +50,7 @@ def numbers_splitter(data=[], **parameter_diction):
         numbers_reducer.main()
         if parameter_diction['save_file_path']:
             if numbers_reducer.trash_list:
-                if not data:
+                if parameter_diction['data_path']:
                     filename = numbers_reducer.save_file_path + u'\\' + u'numbers_data_trash.txt'
                     export_to_txt(data_list=numbers_reducer.trash_list,
                                   file_name=filename,
@@ -79,7 +79,7 @@ def tags_splitter(data=[], **parameter_diction):
         tags_reducer.main()
         if parameter_diction['save_file_path']:
             if tags_reducer.trash_list:
-                if not data:
+                if parameter_diction['data_path']:
                     filename = tags_reducer.save_file_path + u'\\' + u'tags_data_trash.txt'
                     export_to_txt(data_list=tags_reducer.trash_list,
                                   file_name=filename,
@@ -108,7 +108,7 @@ def abnormal_splitter(data=[], **parameter_diction):
         abnormal_reducer.main()
         if parameter_diction['save_file_path']:
             if abnormal_reducer.trash_list:
-                if not data:
+                if parameter_diction['data_path']:
                     filename = abnormal_reducer.save_file_path + u'\\' + u'abnormal_data_trash.txt'
                     export_to_txt(data_list=abnormal_reducer.trash_list,
                                   file_name=filename,
@@ -136,7 +136,7 @@ def series_splitter(data=[], **parameter_diction):
         series_reducer.main()
         if parameter_diction['save_file_path']:
             if series_reducer.trash_list:
-                if not data:
+                if parameter_diction['data_path']:
                     filename = series_reducer.save_file_path + u'\\' + u'series_data_trash.txt'
                     export_to_txt(data_list=series_reducer.trash_list,
                                   file_name=filename,
@@ -165,7 +165,7 @@ def tagging_splitter(data=[], **parameter_diction):
         tagging_reducer.main()
         if parameter_diction['save_file_path']:
             if tagging_reducer.trash_list:
-                if not data:
+                if parameter_diction['data_path']:
                     filename = tagging_reducer.save_file_path + u'\\' + u'tagging_data_trash.txt'
                     export_to_txt(data_list=tagging_reducer.trash_list,
                                   file_name=filename,
@@ -194,7 +194,7 @@ def sources_splitter(data=[], **parameter_diction):
         keywords_reducer.main()
         if parameter_diction['save_file_path']:
             if keywords_reducer.trash_list:
-                if not data:
+                if parameter_diction['data_path']:
                     filename = keywords_reducer.save_file_path + u'\\' + u'sources_data_trash.txt'
                     export_to_txt(data_list=keywords_reducer.trash_list, file_name=filename,
                                   column_head=keywords_reducer.header)
@@ -212,7 +212,7 @@ def sources_splitter(data=[], **parameter_diction):
     return
 
 
-def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data",
+def find_trash_data(data_path, save_file_path=u"D:\WorkSpace\Data",
                     solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
                     data_index_name='text', sources_index_name='source',
                     has_header=True, keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
@@ -232,7 +232,6 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data",
         'abnormal': abnormal_splitter,
         'tagging': tagging_splitter,
     }
-
     for classifier_index in range(len(test_classifier)):
         starttime = datetime.datetime.now()
         classifier = test_classifier[classifier_index]
@@ -250,48 +249,100 @@ def find_clean_data(data_path, save_file_path=u"D:\WorkSpace\Data",
                                     max_symbol=max_symbol,)
         endtime = datetime.datetime.now()
         interval = endtime - starttime
-        print ur'Cleaning data done! Time cost: ', interval
+        print classifier, ur'cleaning done! Time cost: ', interval
 
 
-def find_weibo_data(data_path, save_file_path=u"D:\WorkSpace\Data",
-                    data_index_name='text', sources_index_name='source',
-                    has_header=True, keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
-                    sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
-                    min_char=4):
+def div_list(ls, n):
+    if not isinstance(ls, list) or not isinstance(n, int):
+        return []
+    ls_len = len(ls)
+    if n <= 0 or 0 == ls_len:
+        return []
+    if n > ls_len:
+        return []
+    elif n == ls_len:
+        return [[i] for i in ls]
+    else:
+        j = ls_len/n
+        ls_return = []
+        for i in xrange(0, (n-1)*j, j):
+            ls_return.append(ls[i:i+j])
+        ls_return.append(ls[(n-1)*j:])
+
+        return ls_return
+
+
+def apply_clean_ways(raw_data, data_index_name=2, sources_index_name=3,
+                     keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
+                     sources_path=ur"D:\WorkSpace\Data\trash_sources.txt", min_char=4):
+    raw_data = keywords_splitter(data=raw_data, data_path='', save_file_path='',
+                                 data_index_name=data_index_name,
+                                 has_header=False, keyword_path=keyword_path, )
+
+    raw_data = sources_splitter(data=raw_data, data_path='', save_file_path='',
+                                sources_index_name=sources_index_name,
+                                has_header=False, sources_path=sources_path, )
+
+    raw_data = series_splitter(data=raw_data, data_path='', save_file_path='',
+                               data_index_name=data_index_name,
+                               has_header=False)
+
+    raw_data = tags_splitter(data=raw_data, data_path='', save_file_path='',
+                             data_index_name=data_index_name, min_char=min_char,
+                             has_header=False)
+    return raw_data
+
+
+def weibo_cleaning(data_path, save_file_path=u"D:\WorkSpace\Data",
+                   data_index_name=u'text', sources_index_name=u'source',
+                   has_header=True, keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
+                   sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
+                   min_char=4):
+    # 读入数据——可以改为read_csv
     starttime = datetime.datetime.now()
-    r = keywords_splitter(data_path=data_path, save_file_path='',
-                          data_index_name=data_index_name,
-                          has_header=has_header, keyword_path=keyword_path,)
+    filename = data_path
 
-    r = sources_splitter(data=r, data_path='', save_file_path='',
-                         sources_index_name=3,
-                         has_header=False, sources_path=sources_path, )
+    with io.open(filename, "r", encoding='utf-8') as f:
+        if has_header:
+            header = f.readline().rstrip('\n').rstrip(' ').rstrip('\t').split("\t")
+            data_index = header.index(data_index_name)
+            sources_index = header.index(sources_index_name)
+        else:
+            header = None
+            data_index = data_index_name
+            sources_index = sources_index_name
 
-    r = series_splitter(data=r, data_path='', save_file_path='',
-                        data_index_name=2,
-                        has_header=False)
+        data = [line.rstrip('\n').rstrip(' ').rstrip('\t').split("\t") for line in f]
+    # print header
+    # print len(data)
 
-    tags_splitter(data=r, data_path='', save_file_path=save_file_path,
-                  data_index_name=2, min_char=min_char,
-                  has_header=False)
+    clean_data = apply_clean_ways(data, data_index_name=data_index, sources_index_name=sources_index,
+                                  keyword_path=keyword_path, sources_path=sources_path, min_char=min_char)
 
+    # 输出数据
+    df = pd.DataFrame(clean_data, columns=header)
+    df.to_csv(save_file_path + u'\\clean_data.txt', encoding=u'utf-8', index=None,
+              sep='\t', mode='w', quoting=csv.QUOTE_NONE,)
     endtime = datetime.datetime.now()
     interval = endtime - starttime
     print ur'Cleaning data done! Time cost: ', interval
 
 
 if __name__ == u"__main__":
-    find_clean_data(data_path=ur"D:\WorkSpace\Data\WeiboData\1\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
-                    solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
-                    data_index_name=2, sources_index_name=3, has_header=False)
-    # find_clean_data(data_path=ur"D:\WorkSpace\Data\WeiboData\2\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
+    # find_trash_data(data_path=ur"D:\WorkSpace\Data\WeiboData\1\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
+    #                 solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
+    #                 data_index_name=2, sources_index_name=3, has_header=False)
+    # find_trash_data(data_path=ur"D:\WorkSpace\Data\WeiboData\2\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
     #                 solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
     #                 data_index_name='text', sources_index_name='source', has_header=True)
-    # find_clean_data(data_path=ur"D:\WorkSpace\Data\虎扑---帖1.txt", keyword_path=ur"D:\workspace\Data\通用词库",
+    # find_trash_data(data_path=ur"D:\WorkSpace\Data\虎扑---帖1.txt",
+    #                 keyword_path=ur"D:\workspace\Data\通用词库1",
     #                 save_file_path=u"D:\WorkSpace\Data",
     #                 solutions=[ur'tagging', ur'numbers'],
     #                 data_index_name='Content', has_header=True)
-    # find_weibo_data(data_path=ur"D:\WorkSpace\Data\WeiboData\3\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",)
+
+    weibo_cleaning(data_path=ur"D:\WorkSpace\Data\WeiboData\3\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",)
+    # weibo_cleaning(data_path=ur"D:\WorkSpace\Data\clean_data.txt", save_file_path=u"D:\WorkSpace\Data", )
 
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",
     #                  )

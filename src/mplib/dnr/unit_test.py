@@ -16,7 +16,7 @@ from pandas import DataFrame
 import io
 import csv
 import datetime
-from api import find_weibo_data
+
 
 def string_preprocess(string):
     raw_string = string
@@ -32,7 +32,7 @@ def string_preprocess(string):
 def classify(traindata_filename=ur'D:\workspace\weibo\data\8000条测试数据.xlsx',
              stopwords_filename=ur"D:\workspace\weibo\data\stop_words.txt",
              newdata_filename=ur"D:\WorkSpace\Data\WeiboData\1\clean_data.txt", save_file_path=ur'data'):
-    starttime = datetime.datetime.now()
+
     # 读取训练数据
     filename = traindata_filename
     threshold = 5000
@@ -101,9 +101,6 @@ def classify(traindata_filename=ur'D:\workspace\weibo\data\8000条测试数据.x
     trash_data.to_csv(save_file_path + ur'\trash_data2.txt', header=None, encoding=u'utf-8',
                       index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
 
-    endtime = datetime.datetime.now()
-    interval = endtime - starttime
-    print ur'Cleaning data done! Time cost: ', interval
     return interval
 
 
@@ -120,7 +117,7 @@ if __name__ == u"__main__":
         # print savefile
 
         starttime = datetime.datetime.now()
-        find_weibo_data(data_path=data, save_file_path=savefile,)
+        weibo_cleaning(data_path=data, save_file_path=savefile,)
         endtime = datetime.datetime.now()
         interval = endtime - starttime
         print ur'Cleaning data done! Time cost: ', interval
