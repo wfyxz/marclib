@@ -3,6 +3,7 @@
 from factory import *
 from helper import *
 import datetime
+import io
 
 
 def keywords_splitter(data=[], **parameter_diction):
@@ -272,7 +273,7 @@ def div_list(ls, n):
         return ls_return
 
 
-def apply_clean_ways(raw_data, data_index_name=2, sources_index_name=3,
+def weibo_clean_ways(raw_data, data_index_name=2, sources_index_name=3,
                      keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
                      sources_path=ur"D:\WorkSpace\Data\trash_sources.txt", min_char=4):
     raw_data = keywords_splitter(data=raw_data, data_path='', save_file_path='',
@@ -297,7 +298,7 @@ def weibo_cleaning(data_path, save_file_path=u"D:\WorkSpace\Data",
                    data_index_name=u'text', sources_index_name=u'source',
                    has_header=True, keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
                    sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
-                   min_char=4):
+                   min_char=4, output_data=True, return_header=True):
     # 读入数据——可以改为read_csv
     starttime = datetime.datetime.now()
     filename = data_path
@@ -316,16 +317,26 @@ def weibo_cleaning(data_path, save_file_path=u"D:\WorkSpace\Data",
     # print header
     # print len(data)
 
-    clean_data = apply_clean_ways(data, data_index_name=data_index, sources_index_name=sources_index,
+    clean_data = weibo_clean_ways(data, data_index_name=data_index, sources_index_name=sources_index,
                                   keyword_path=keyword_path, sources_path=sources_path, min_char=min_char)
 
     # 输出数据
-    df = pd.DataFrame(clean_data, columns=header)
-    df.to_csv(save_file_path + u'\\clean_data.txt', encoding=u'utf-8', index=None,
-              sep='\t', mode='w', quoting=csv.QUOTE_NONE,)
+    if output_data:
+        df = pd.DataFrame(clean_data, columns=header)
+        df.to_csv(save_file_path + u'\\clean_data.txt', encoding=u'utf-8', index=None,
+                  sep='\t', mode='w', quoting=csv.QUOTE_NONE,)
+    else:
+        if return_header:
+            return clean_data, header
+        else:
+            return clean_data
     endtime = datetime.datetime.now()
     interval = endtime - starttime
-    print ur'Cleaning data done! Time cost: ', interval
+    # print ur'Cleaning data done! Time cost: ', interval
+
+
+def other_platform_cleaning():
+    pass
 
 
 if __name__ == u"__main__":
@@ -335,13 +346,13 @@ if __name__ == u"__main__":
     # find_trash_data(data_path=ur"D:\WorkSpace\Data\WeiboData\2\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",
     #                 solutions=[ur'keywords', ur'tags', ur'sources', ur'series'],
     #                 data_index_name='text', sources_index_name='source', has_header=True)
-    # find_trash_data(data_path=ur"D:\WorkSpace\Data\虎扑---帖1.txt",
-    #                 keyword_path=ur"D:\workspace\Data\通用词库1",
-    #                 save_file_path=u"D:\WorkSpace\Data",
-    #                 solutions=[ur'tagging', ur'numbers'],
-    #                 data_index_name='Content', has_header=True)
+    find_trash_data(data_path=ur"D:\WorkSpace\Data\虎扑---帖1.txt",
+                    keyword_path=ur"D:\workspace\Data\通用词库1",
+                    save_file_path=u"D:\WorkSpace\Data",
+                    solutions=[ur'tagging', ur'numbers'],
+                    data_index_name='Content', has_header=True)
 
-    weibo_cleaning(data_path=ur"D:\WorkSpace\Data\WeiboData\3\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",)
+    # weibo_cleaning(data_path=ur"D:\WorkSpace\Data\WeiboData\3\weibo1.txt", save_file_path=u"D:\WorkSpace\Data",)
     # weibo_cleaning(data_path=ur"D:\WorkSpace\Data\clean_data.txt", save_file_path=u"D:\WorkSpace\Data", )
 
     # numbers_splitter(data_path=ur"D:\WorkSpace\Data\weibo1.txt",

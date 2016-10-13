@@ -29,37 +29,26 @@ def string_preprocess(string):
     return clean_string
 
 
-def classify(traindata_filename=ur'D:\workspace\weibo\data\8000条测试数据.xlsx',
-             stopwords_filename=ur"D:\workspace\weibo\data\stop_words.txt",
-             newdata_filename=ur"D:\WorkSpace\Data\WeiboData\1\clean_data.txt", save_file_path=ur'data'):
+def fast_clean(data_path=ur'D:\workspace\Data\WeiboData',
+               train_data_path=ur'D:\workspace\weibo\data\8000条测试数据.xlsx',
+               stop_words_path=ur"D:\workspace\weibo\data\stop_words.txt",
+               use_beyes=True):
+    path = data_path
+    names = os.listdir(path)
+    times = [datetime.timedelta(0)] * 2
+    length = float(len(names))
 
+    # region 贝叶斯分类器
     # 读取训练数据
-    filename = traindata_filename
+    filename = train_data_path
     threshold = 5000
     dataframe = pd.read_excel(filename, sheetname=2, index_col=None, header=None)
     rdata = dataframe[:threshold]
     train_words = [string_preprocess(string) for string in rdata[2]]
     train_tags = [tag for tag in rdata[1]]
 
-    # 读取要分类的数据
-    names = ['PostID', 'PublishDate', 'Content', 'Source', 'PostGeoLocation', 'PicUrls',
-             'UserID', 'UserProvinceCode', 'UserCityCode', 'UserLocation', 'UserGender',
-             'FollowerCount', 'FollowingCount', 'UpdateCount', 'FavouritesCount', 'Verified',
-             'VerifiedReason', 'MutualFollowCount']
-
-    filename = newdata_filename
-    try:
-        with io.open(filename, "r", encoding='utf-8') as f:
-            # line = f.readline()
-            data = [line.rstrip('\n').rstrip(' ').rstrip('\t').split("\t") for line in f]
-    except:
-        return datetime.timedelta(0)
-    else:
-        df = DataFrame(data, columns=names)
-        new_words = [string_preprocess(string) for string in df['Content']]
-
     # 从文件导入停用词表
-    with io.open(stopwords_filename, 'r', encoding='utf-8') as f:
+    with io.open(stop_words_path, 'r', encoding='utf-8') as f:
         stpwrd_content = f.read()
         stop_words = stpwrd_content.splitlines()
 
@@ -68,66 +57,58 @@ def classify(traindata_filename=ur'D:\workspace\weibo\data\8000条测试数据.x
     #                       stop_words=stop_words)
     v = TfidfVectorizer(tokenizer=lambda x: jieba.cut(x), analyzer='word', stop_words=stop_words)
     train_data = v.fit_transform(train_words)
-    test_data = v.transform(new_words)
-    words = v.get_feature_names()
-
-    # 降维
-    S = SelectKBest(chi2, k=5000)
-    new_train_data = S.fit_transform(train_data, train_tags)
-    new_test_data = S.transform(test_data)
 
     # 训练模型
     clf = MultinomialNB(alpha=0.03)
     clf.fit(train_data, numpy.asarray(train_tags))
+    # endregion
 
-    # 分类
-    prediction = clf.predict(test_data)
-
-    # 筛选
-    clean_index = []
-    trash_index = []
-    for index in range(len(prediction)):
-        if prediction[index] == 1:
-            clean_index.append(True)
-            trash_index.append(False)
-        else:
-            clean_index.append(False)
-            trash_index.append(True)
-    # 保存
-    clean_data = df[clean_index]
-    trash_data = df[trash_index]
-    clean_data.to_csv(save_file_path + ur'\clean_data2.txt', header=None, encoding=u'utf-8',
-                      index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
-    trash_data.to_csv(save_file_path + ur'\trash_data2.txt', header=None, encoding=u'utf-8',
-                      index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
-
-    return interval
-
-
-if __name__ == u"__main__":
-    path = ur'D:\workspace\Data\WeiboData'
-    names = os.listdir(path)
-    times = [datetime.timedelta(0)]*2
-    length = float(len(names))
-
-    for name in names[:5]:
+    for name in names:
         data = path + '\\' + name + ur'\weibo1.txt'
         savefile = path + '\\' + name
         print 'Processing: ', data
-        # print savefile
 
+        # 普通方法
         starttime = datetime.datetime.now()
-        weibo_cleaning(data_path=data, save_file_path=savefile,)
+        r, h = weibo_cleaning(data_path=data, save_file_path=savefile,
+                              data_index_name=u'text', sources_index_name=u'source',
+                              has_header=True, output_data=not use_beyes,return_header=True)
+
         endtime = datetime.datetime.now()
         interval = endtime - starttime
         print ur'Cleaning data done! Time cost: ', interval
         times[0] += interval
 
-        NB_time = classify(newdata_filename=savefile + r'\clean_data.txt', save_file_path=savefile)
-        times[1] += NB_time
+        # 贝叶斯
+        starttime = datetime.datetime.now()
+        new_words = [string_preprocess(string[2]) for string in r]
+        test_data = v.transform(new_words)
+        prediction = clf.predict(test_data)
+        # 筛选
+        clean_data = []
+        trash_data = []
+        for index in range(len(prediction)):
+            if prediction[index] == 1:
+                clean_data.append(r[index])
+            else:
+                trash_data.append(r[index])
+        # 保存
+        clean_data = DataFrame(clean_data)
+        trash_data = DataFrame(trash_data)
+        clean_data.to_csv(path + '\\' + name + ur'\clean_data.txt', header=h, encoding=u'utf-8',
+                          index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
+        # trash_data.to_csv(path + '\\' + name + ur'\trash_data.txt', header=h, encoding=u'utf-8',
+        #                   index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
 
-    outcome = [time.seconds/5.0 for time in times]
+        endtime = datetime.datetime.now()
+        interval = endtime - starttime
+        print ur'Cleaning data done! Time cost: ', interval
+        times[1] += interval
 
+    outcome = [time.seconds / length for time in times]
+    print length
     print outcome
 
+if __name__ == u"__main__":
+    fast_clean()
 

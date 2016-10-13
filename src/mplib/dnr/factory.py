@@ -7,7 +7,6 @@ import re
 from marclearn.tools.tagging import tagging
 from glob import glob
 import pandas as pd
-import io
 
 
 # region 可复用基本类 可以得到文件名，文件拓展，还有一个加序号的方法
@@ -243,7 +242,7 @@ class TaggingReducer(BaseReducer):
         raw_data = pd.read_csv(self.current_data_abspath, sep='\t', index_col=None, error_bad_lines=False,
                                low_memory=False)
         self.header = raw_data.columns
-        print ur'Data loaded!'
+        # print ur'Data loaded!'
         # 处理缺失值
         raw_data = raw_data.ix[raw_data[self.data_column_name].dropna().index, :]
         # 处理重复值
