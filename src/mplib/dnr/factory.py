@@ -4,9 +4,17 @@ from __future__ import division
 from os import path
 from mplib.common.base_class import AttributeDict
 import re
-from marclearn.tools.tagging import tagging
 from glob import glob
 import pandas as pd
+import os
+import jieba
+import numpy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from pandas import DataFrame
+import io
+import csv
+import datetime
 
 
 # region 可复用基本类 可以得到文件名，文件拓展，还有一个加序号的方法
@@ -178,28 +186,30 @@ class KeywordsReducer(BaseReducer):
             self.current_string = string[self.data_column_index]
             hit = False
             # for keywords in self.keywords_list:
-            for keywords_index in range(0, len(self.keywords_list)):
-                keywords = self.keywords_list[keywords_index]
-                self.current_keywords = keywords
-                self.keywords_finder()
-                if self.current_result:
-                    self.trash_list.append(string)
-                    self.result_list.append(self.current_result)
-                    hit = True
-                    self.count_list[keywords_index] += 1
-                    if self.one_hit_strategy:
-                        break
+            try:
+                for keywords_index in range(0, len(self.keywords_list)):
+                    keywords = self.keywords_list[keywords_index]
+                    self.current_keywords = keywords
+                    self.keywords_finder()
+                    if self.current_result:
+                        self.trash_list.append(string)
+                        self.result_list.append(self.current_result)
+                        hit = True
+                        self.count_list[keywords_index] += 1
+                        if self.one_hit_strategy:
+                            break
+                        else:
+                            continue
                     else:
                         continue
-                else:
+                if hit:
+                    self.trash_index.append(index)
                     continue
-            if hit:
-                self.trash_index.append(index)
-                continue
-            else:
-                self.clean_index.append(index)
-                self.cleaned_list.append(string)
-
+                else:
+                    self.clean_index.append(index)
+                    self.cleaned_list.append(string)
+            except:
+                pass
         if self.show_process:
             total_length = float(len(self.raw_list))
             keyword_count = 0
@@ -218,7 +228,7 @@ class KeywordsReducer(BaseReducer):
 # endregion
 
 
-# region 打标签去水
+# region 之前的打标签去水工具
 class TaggingReducer(BaseReducer):
     """
     利用打标签去水的工具
@@ -251,20 +261,20 @@ class TaggingReducer(BaseReducer):
         # 提取文本内容，打标签
         # data = Series([string.encode('utf-8') for string in raw_data[self.data_column_name]])
         data = raw_data[self.data_column_name]
-        att = tagging(data, tags)
+        # att = tagging(data, tags)
 
-        is_trash = att.apply(sum, axis=1)
+        # is_trash = att.apply(sum, axis=1)
         # raw_data['is_trash'] = is_trash
-        mask_cleaned = is_trash == 0
-        cleaned = raw_data[mask_cleaned]
-        mask_trash = is_trash == 1
-        trash = raw_data[mask_trash]
+        # mask_cleaned = is_trash == 0
+        # cleaned = raw_data[mask_cleaned]
+        # mask_trash = is_trash == 1
+        # trash = raw_data[mask_trash]
 
         # 转换数据格式
-        cleaned_np_array = cleaned.values
-        trash_np_array = trash.values
-        self.cleaned_list = cleaned_np_array.tolist()
-        self.trash_list = trash_np_array.tolist()
+        # cleaned_np_array = cleaned.values
+        # trash_np_array = trash.values
+        # self.cleaned_list = cleaned_np_array.tolist()
+        # self.trash_list = trash_np_array.tolist()
 
         # cleaned_file_name = self.save_file_path + r'\clean_data.txt'
         # trash_file_name = self.save_file_path + r'\dictionary_data_trash.txt'
@@ -287,7 +297,7 @@ class TagsReducer(BaseReducer):
     def __init__(self):
         BaseReducer.__init__(self)
         self.numbers = 10
-        self.tags = 2
+        self.tags = 3
 
     def get_tags(self):
         if self.current_string:
@@ -329,13 +339,16 @@ class TagsReducer(BaseReducer):
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
-            self.tags_finder()
-            if self.current_result:
-                self.clean_index.append(index)
-                self.cleaned_list.append(string)
-            else:
-                self.trash_index.append(index)
-                self.trash_list.append(string)
+            try:
+                self.tags_finder()
+                if self.current_result:
+                    self.clean_index.append(index)
+                    self.cleaned_list.append(string)
+                else:
+                    self.trash_index.append(index)
+                    self.trash_list.append(string)
+            except:
+                pass
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
         # self.keywords_list = None
@@ -382,13 +395,15 @@ class NumbersReducer(BaseReducer):
             string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
             self.number_finder()
-            if self.current_result:
-                self.clean_index.append(index)
-                self.cleaned_list.append(string)
-            else:
-                self.trash_index.append(index)
-                self.trash_list.append(string)
-
+            try:
+                if self.current_result:
+                    self.clean_index.append(index)
+                    self.cleaned_list.append(string)
+                else:
+                    self.trash_index.append(index)
+                    self.trash_list.append(string)
+            except:
+                pass
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
         # self.keywords_list = None
@@ -446,13 +461,15 @@ class AbnormalReducer(BaseReducer):
             string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
             self.abnormal_finder()
-            if self.current_result:
-                self.clean_index.append(index)
-                self.cleaned_list.append(string)
-            else:
-                self.trash_index.append(index)
-                self.trash_list.append(string)
-
+            try:
+                if self.current_result:
+                    self.clean_index.append(index)
+                    self.cleaned_list.append(string)
+                else:
+                    self.trash_index.append(index)
+                    self.trash_list.append(string)
+            except:
+                pass
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
         # self.keywords_list = None
@@ -506,13 +523,15 @@ class SeriesReducer(BaseReducer):
             string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
             self.series_finder()
-            if self.current_result:
-                self.clean_index.append(index)
-                self.cleaned_list.append(string)
-            else:
-                self.trash_index.append(index)
-                self.trash_list.append(string)
-
+            try:
+                if self.current_result:
+                    self.clean_index.append(index)
+                    self.cleaned_list.append(string)
+                else:
+                    self.trash_index.append(index)
+                    self.trash_list.append(string)
+            except:
+                pass
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
         # self.keywords_list = None
@@ -596,13 +615,15 @@ class SourcesReducer(BaseReducer):
             string = self.raw_list[index]
             self.current_string = string[self.data_column_index]
             self.sources_finder()
-            if self.current_result:
-                self.clean_index.append(index)
-                self.cleaned_list.append(string)
-            else:
-                self.trash_index.append(index)
-                self.trash_list.append(string)
-
+            try:
+                if self.current_result:
+                    self.clean_index.append(index)
+                    self.cleaned_list.append(string)
+                else:
+                    self.trash_index.append(index)
+                    self.trash_list.append(string)
+            except:
+                pass
         # 在多数据文件或者多词库文件进行批量处理的时候需要对这些数据进行重置
         # self.raw_list = None
         # self.keywords_list = None
@@ -615,16 +636,16 @@ if __name__ == u"__main__":
     # kr = KeywordsReducer()
     # kr = SourcesReducer()
     # kr = TagsReducer()
-    # kr = NumbersReducer()
+    kr = NumbersReducer()
     # kr = SeriesReducer()
-    # kr.numbers = 10
+    kr.min_numbers = 5
     # kr.show_process = True
-    # kr.current_data_abspath = ur"D:\WorkSpace\Data\weibodata\1\weibo1.txt"
+    kr.current_data_abspath = ur"D:\WorkSpace\Data\data_sample.txt"
     # kr.has_header = True
     # kr.data_column_name = ur"text"
     # kr.current_dict_abspath = ur"D:\workspace\Data\keywords.txt"
-    # kr.has_header = False
-    # kr.data_column_name = 2
+    kr.has_header = False
+    kr.data_column_name = 2
 
     # kr.data_column_index = 3
     # kr.current_dict_abspath = ur"D:\WorkSpace\Data\trash_sources.txt"
@@ -632,12 +653,12 @@ if __name__ == u"__main__":
     # kr.min_numbers = 5
     # kr.max_numbers = 500
 
-    kr = TaggingReducer()
-    kr.current_data_abspath = ur"D:\WorkSpace\Data\虎扑---帖1.txt"
-    kr.has_header = True
-    kr.data_column_name = 'Content'
-    kr.current_dict_abspath = ur"D:\workspace\Data\通用词库"
-    kr.save_file_path = ur'D:\WorkSpace\Data'
+    # kr = TaggingReducer()
+    # kr.current_data_abspath = ur"D:\WorkSpace\Data\虎扑---帖1.txt"
+    # kr.has_header = True
+    # kr.data_column_name = 'Content'
+    # kr.current_dict_abspath = ur"D:\workspace\Data\通用词库2"
+    # kr.save_file_path = ur'D:\WorkSpace\Data'
 
     kr.main()
 

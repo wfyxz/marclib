@@ -1,21 +1,6 @@
 # coding: utf-8
 # __author__: u"John"
 from api import *
-import os
-import jieba
-import numpy
-import pandas as pd
-from sklearn import metrics
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import chi2
-import re
-from pandas import DataFrame
-import io
-import csv
-import datetime
 
 
 def string_preprocess(string):
@@ -63,47 +48,51 @@ def fast_clean(data_path=ur'D:\workspace\Data\WeiboData',
     clf.fit(train_data, numpy.asarray(train_tags))
     # endregion
 
-    for name in names:
+    for name in names[211:]:
         data = path + '\\' + name + ur'\weibo1.txt'
         savefile = path + '\\' + name
         print 'Processing: ', data
 
+        starttime = datetime.datetime.now()
         # 普通方法
-        starttime = datetime.datetime.now()
-        r, h = weibo_cleaning(data_path=data, save_file_path=savefile,
-                              data_index_name=u'text', sources_index_name=u'source',
-                              has_header=True, output_data=not use_beyes,return_header=True)
+        try:
+            r, h = weibo_cleaning(data_path=data, save_file_path=savefile,
+                                  data_index_name=u'text', sources_index_name=u'source',
+                                  has_header=True, output_data=not use_beyes, return_header=True)
+        except:
+            print data, ur' failed.'
+            pass
+        else:
+            endtime = datetime.datetime.now()
+            interval = endtime - starttime
+            print ur'Cleaning data done! Time cost: ', interval
+            times[0] += interval
 
-        endtime = datetime.datetime.now()
-        interval = endtime - starttime
-        print ur'Cleaning data done! Time cost: ', interval
-        times[0] += interval
+            # 贝叶斯
+            starttime = datetime.datetime.now()
+            new_words = [string_preprocess(string[2]) for string in r]
+            test_data = v.transform(new_words)
+            prediction = clf.predict(test_data)
+            # 筛选
+            clean_data = []
+            trash_data = []
+            for index in range(len(prediction)):
+                if prediction[index] == 1:
+                    clean_data.append(r[index])
+                else:
+                    trash_data.append(r[index])
+            # 保存
+            clean_data = DataFrame(clean_data)
+            trash_data = DataFrame(trash_data)
+            clean_data.to_csv(path + '\\' + name + ur'\clean_data.txt', header=h, encoding=u'utf-8',
+                              index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
+            # trash_data.to_csv(path + '\\' + name + ur'\trash_data.txt', header=h, encoding=u'utf-8',
+            #                   index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
 
-        # 贝叶斯
-        starttime = datetime.datetime.now()
-        new_words = [string_preprocess(string[2]) for string in r]
-        test_data = v.transform(new_words)
-        prediction = clf.predict(test_data)
-        # 筛选
-        clean_data = []
-        trash_data = []
-        for index in range(len(prediction)):
-            if prediction[index] == 1:
-                clean_data.append(r[index])
-            else:
-                trash_data.append(r[index])
-        # 保存
-        clean_data = DataFrame(clean_data)
-        trash_data = DataFrame(trash_data)
-        clean_data.to_csv(path + '\\' + name + ur'\clean_data.txt', header=h, encoding=u'utf-8',
-                          index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
-        # trash_data.to_csv(path + '\\' + name + ur'\trash_data.txt', header=h, encoding=u'utf-8',
-        #                   index=None, sep='\t', mode='w', quoting=csv.QUOTE_NONE)
-
-        endtime = datetime.datetime.now()
-        interval = endtime - starttime
-        print ur'Cleaning data done! Time cost: ', interval
-        times[1] += interval
+            endtime = datetime.datetime.now()
+            interval = endtime - starttime
+            print ur'Cleaning data done! Time cost: ', interval
+            times[1] += interval
 
     outcome = [time.seconds / length for time in times]
     print length
