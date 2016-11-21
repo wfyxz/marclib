@@ -1,13 +1,29 @@
 # coding: utf-8
 # __author__: u"John"
 from __future__ import unicode_literals
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from pandas import DataFrame
+from os.path import join
 from factory import *
 from helper import *
-from os.path import join
 import traceback
+import datetime
+import jieba
+import numpy
+import io
+import os
 
 
 def string_preprocess(string):
+    """
+    字符串预处理
+    将所有链接不管是http, ftp, 都替换成链接
+    将@一个人、地址替换成@, 这里可能是个邮箱
+    将数字、英文字母替换成空字符串
+    :param string:
+    :return:
+    """
     raw_string = string
     http_info = re.compile("[a-zA-z]+://[^\s]*")
     string_without_http = http_info.sub(r"链接", raw_string)
@@ -18,152 +34,182 @@ def string_preprocess(string):
     return clean_string
 
 
-def keywords_splitter(data=list(), **parameter_diction):
-    keywords_reducer = KeywordsReducer()
-    keywords_reducer.raw_list = data
-    keywords_reducer.data_column_name = parameter_diction.get("data_index_name")
-    keywords_reducer.one_hit_strategy = False
-    keywords_reducer.current_dict_abspath = parameter_diction.get("keyword_path")
-    keywords_reducer.current_data_abspath = parameter_diction.get("data_path")
-    keywords_reducer.has_header = parameter_diction.get("has_header")
-    keywords_reducer.save_file_path = parameter_diction.get("save_file_path")
+def keywords_splitter(data=list(), **kwargs):
+    """
+    关键词去水
+    :param data:
+    :param kwargs:
+    :return:
+    """
+    reducer = KeywordsReducer()
+    reducer.raw_list = data
+    reducer.data_column_name = kwargs.get("data_index_name")
+    reducer.one_hit_strategy = kwargs.get("one_hit_strategy", True)
+    reducer.current_dict_abspath = kwargs.get("keyword_path")
+    reducer.current_data_abspath = kwargs.get("data_path")
+    reducer.has_header = kwargs.get("has_header", False)
+    reducer.save_file_path = kwargs.get("save_file_path")
     try:
-        keywords_reducer.main()
-        if parameter_diction.get("save_file_path"):
-            if keywords_reducer.trash_list:
-                if parameter_diction.get("data_path"):
-                    filename = join(keywords_reducer.save_file_path, "keywords_data_trash.txt")
-                    export_to_txt(data_list=keywords_reducer.trash_list, file_name=filename,
-                                  column_head=keywords_reducer.header)
-            if keywords_reducer.cleaned_list:
-                filename = join(keywords_reducer.save_file_path, "clean_data.txt")
-                export_to_txt(data_list=keywords_reducer.cleaned_list,
+        reducer.main()
+        if kwargs.get("save_file_path"):
+            if reducer.trash_list:
+                if kwargs.get("data_path"):
+                    filename = join(reducer.save_file_path, "keywords_data_trash.txt")
+                    export_to_txt(data_list=reducer.trash_list, file_name=filename,
+                                  column_head=reducer.header)
+            if reducer.cleaned_list:
+                filename = join(reducer.save_file_path, "clean_data.txt")
+                export_to_txt(data_list=reducer.cleaned_list,
                               file_name=filename,
-                              column_head=keywords_reducer.header)
+                              column_head=reducer.header)
         else:
-            return keywords_reducer.cleaned_list
+            return reducer.cleaned_list, reducer.error_list
     except:
         traceback.print_exc()
     return
 
 
 def numbers_splitter(data=list(), **parameter_diction):
-    numbers_reducer = NumbersReducer()
-    numbers_reducer.raw_list = data
-    numbers_reducer.data_column_name = parameter_diction.get("data_index_name")
-    numbers_reducer.min_numbers = parameter_diction.get("min_char")
-    numbers_reducer.max_numbers = parameter_diction.get("max_char")
-    numbers_reducer.current_data_abspath = parameter_diction.get("data_path")
-    numbers_reducer.has_header = parameter_diction.get("has_header")
-    numbers_reducer.save_file_path = parameter_diction.get("save_file_path")
+    """
+    字数去水
+    :param data:
+    :param parameter_diction:
+    :return:
+    """
+    reducer = NumbersReducer()
+    reducer.raw_list = data
+    reducer.data_column_name = parameter_diction.get("data_index_name")
+    reducer.min_numbers = parameter_diction.get("min_char")
+    reducer.max_numbers = parameter_diction.get("max_char")
+    reducer.current_data_abspath = parameter_diction.get("data_path")
+    reducer.has_header = parameter_diction.get("has_header")
+    reducer.save_file_path = parameter_diction.get("save_file_path")
     try:
-        numbers_reducer.main()
+        reducer.main()
         if parameter_diction.get("save_file_path"):
-            if numbers_reducer.trash_list:
+            if reducer.trash_list:
                 if parameter_diction.get("data_path"):
-                    filename = join(numbers_reducer.save_file_path, "numbers_data_trash.txt")
-                    export_to_txt(data_list=numbers_reducer.trash_list,
+                    filename = join(reducer.save_file_path, "numbers_data_trash.txt")
+                    export_to_txt(data_list=reducer.trash_list,
                                   file_name=filename,
-                                  column_head=numbers_reducer.header)
-            if numbers_reducer.cleaned_list:
-                filename = join(numbers_reducer.save_file_path, "clean_data.txt")
-                export_to_txt(data_list=numbers_reducer.cleaned_list,
+                                  column_head=reducer.header)
+            if reducer.cleaned_list:
+                filename = join(reducer.save_file_path, "clean_data.txt")
+                export_to_txt(data_list=reducer.cleaned_list,
                               file_name=filename,
-                              column_head=numbers_reducer.header)
+                              column_head=reducer.header)
         else:
-            return numbers_reducer.cleaned_list
+            return reducer.cleaned_list, reducer.error_list
     except:
         traceback.print_exc()
     return
 
 
 def tags_splitter(data=list(), **parameter_diction):
-    tags_reducer = TagsReducer()
-    tags_reducer.raw_list = data
-    tags_reducer.data_column_name = parameter_diction.get("data_index_name")
-    tags_reducer.numbers = parameter_diction.get("min_char")
-    tags_reducer.current_data_abspath = parameter_diction.get("data_path")
-    tags_reducer.has_header = parameter_diction.get("has_header")
-    tags_reducer.save_file_path = parameter_diction.get("save_file_path")
-    tags_reducer.main()
+    """
+    热门话题去水
+    :param data:
+    :param parameter_diction:
+    :return:
+    """
+    reducer = TagsReducer()
+    reducer.raw_list = data
+    reducer.data_column_name = parameter_diction.get("data_index_name")
+    reducer.numbers = parameter_diction.get("min_char")
+    reducer.current_data_abspath = parameter_diction.get("data_path")
+    reducer.has_header = parameter_diction.get("has_header")
+    reducer.save_file_path = parameter_diction.get("save_file_path")
+    reducer.main()
     try:
         if parameter_diction.get("save_file_path"):
-            if tags_reducer.trash_list:
+            if reducer.trash_list:
                 if parameter_diction.get("data_path"):
-                    filename = join(tags_reducer.save_file_path, "tags_data_trash.txt")
-                    export_to_txt(data_list=tags_reducer.trash_list,
+                    filename = join(reducer.save_file_path, "tags_data_trash.txt")
+                    export_to_txt(data_list=reducer.trash_list,
                                   file_name=filename,
-                                  column_head=tags_reducer.header)
-            if tags_reducer.cleaned_list:
-                filename = join(tags_reducer.save_file_path, "clean_data.txt")
-                export_to_txt(data_list=tags_reducer.cleaned_list,
+                                  column_head=reducer.header)
+            if reducer.cleaned_list:
+                filename = join(reducer.save_file_path, "clean_data.txt")
+                export_to_txt(data_list=reducer.cleaned_list,
                               file_name=filename,
-                              column_head=tags_reducer.header)
+                              column_head=reducer.header)
         else:
-            return tags_reducer.cleaned_list
+            return reducer.cleaned_list, reducer.error_list
     except:
         traceback.print_exc()
     return
 
 
 def abnormal_splitter(data=list(), **parameter_diction):
-    abnormal_reducer = AbnormalReducer()
-    abnormal_reducer.raw_list = data
-    abnormal_reducer.data_column_name = parameter_diction.get("data_index_name")
-    abnormal_reducer.abnormal = parameter_diction.get("max_symbol")
-    abnormal_reducer.current_data_abspath = parameter_diction.get("data_path")
-    abnormal_reducer.has_header = parameter_diction.get("has_header")
-    abnormal_reducer.save_file_path = parameter_diction.get("save_file_path")
+    """
+    特殊符号去水
+    :param data:
+    :param parameter_diction:
+    :return:
+    """
+    reducer = AbnormalReducer()
+    reducer.raw_list = data
+    reducer.data_column_name = parameter_diction.get("data_index_name")
+    reducer.abnormal = parameter_diction.get("max_symbol")
+    reducer.current_data_abspath = parameter_diction.get("data_path")
+    reducer.has_header = parameter_diction.get("has_header")
+    reducer.save_file_path = parameter_diction.get("save_file_path")
     try:
-        abnormal_reducer.main()
+        reducer.main()
         if parameter_diction.get("save_file_path"):
-            if abnormal_reducer.trash_list:
+            if reducer.trash_list:
                 if parameter_diction.get("data_path"):
-                    filename = join(abnormal_reducer.save_file_path, "abnormal_data_trash.txt")
-                    export_to_txt(data_list=abnormal_reducer.trash_list,
+                    filename = join(reducer.save_file_path, "abnormal_data_trash.txt")
+                    export_to_txt(data_list=reducer.trash_list,
                                   file_name=filename,
-                                  column_head=abnormal_reducer.header)
-            if abnormal_reducer.cleaned_list:
-                filename = join(abnormal_reducer.save_file_path, "clean_data.txt")
-                export_to_txt(data_list=abnormal_reducer.cleaned_list,
+                                  column_head=reducer.header)
+            if reducer.cleaned_list:
+                filename = join(reducer.save_file_path, "clean_data.txt")
+                export_to_txt(data_list=reducer.cleaned_list,
                               file_name=filename,
-                              column_head=abnormal_reducer.header)
+                              column_head=reducer.header)
         else:
-            return abnormal_reducer.cleaned_list
+            return reducer.cleaned_list, reducer.error_list
     except:
         traceback.print_exc()
     return
 
 
 def series_splitter(data=list(), **parameter_diction):
-    series_reducer = SeriesReducer()
-    series_reducer.raw_list = data
-    series_reducer.data_column_name = parameter_diction.get("data_index_name")
-    series_reducer.current_data_abspath = parameter_diction.get("data_path")
-    series_reducer.has_header = parameter_diction.get("has_header")
-    series_reducer.save_file_path = parameter_diction.get("save_file_path")
+    reducer = SeriesReducer()
+    reducer.raw_list = data
+    reducer.data_column_name = parameter_diction.get("data_index_name")
+    reducer.current_data_abspath = parameter_diction.get("data_path")
+    reducer.has_header = parameter_diction.get("has_header")
+    reducer.save_file_path = parameter_diction.get("save_file_path")
     try:
-        series_reducer.main()
+        reducer.main()
         if parameter_diction.get("save_file_path"):
-            if series_reducer.trash_list:
+            if reducer.trash_list:
                 if parameter_diction.get("data_path"):
-                    filename = join(series_reducer.save_file_path, "series_data_trash.txt")
-                    export_to_txt(data_list=series_reducer.trash_list,
+                    filename = join(reducer.save_file_path, "series_data_trash.txt")
+                    export_to_txt(data_list=reducer.trash_list,
                                   file_name=filename,
-                                  column_head=series_reducer.header)
-            if series_reducer.cleaned_list:
-                filename = join(series_reducer.save_file_path, "clean_data.txt")
-                export_to_txt(data_list=series_reducer.cleaned_list,
+                                  column_head=reducer.header)
+            if reducer.cleaned_list:
+                filename = join(reducer.save_file_path, "clean_data.txt")
+                export_to_txt(data_list=reducer.cleaned_list,
                               file_name=filename,
-                              column_head=series_reducer.header)
+                              column_head=reducer.header)
         else:
-            return series_reducer.cleaned_list
+            return reducer.cleaned_list, reducer.error_list
     except:
         traceback.print_exc()
     return
 
 
 def tagging_splitter(data=list(), **parameter_diction):
+    """
+    标签去水
+    :param data:
+    :param parameter_diction:
+    :return:
+    """
     tagging_reducer = TaggingReducer()
     tagging_reducer.raw_list = data
     tagging_reducer.data_column_name = parameter_diction.get("data_index_name")
@@ -186,34 +232,41 @@ def tagging_splitter(data=list(), **parameter_diction):
                               file_name=filename,
                               column_head=tagging_reducer.header)
         else:
-            return tagging_reducer.cleaned_list
-    except Exception as e:
-        print str(e)
+            return tagging_reducer.cleaned_list, tagging_reducer.error_list
+
+    except:
+        traceback.print_exc()
     return
 
 
 def sources_splitter(data=list(), **parameter_diction):
-    keywords_reducer = SourcesReducer()
-    keywords_reducer.raw_list = data
-    keywords_reducer.data_column_name = parameter_diction.get("sources_index_name")
-    keywords_reducer.current_dict_abspath = parameter_diction.get("sources_path")
-    keywords_reducer.current_data_abspath = parameter_diction.get("data_path")
-    keywords_reducer.has_header = parameter_diction.get("has_header")
-    keywords_reducer.save_file_path = parameter_diction.get("save_file_path")
+    """
+    客户端去水
+    :param data:
+    :param parameter_diction:
+    :return:
+    """
+    sources_reducer = SourcesReducer()
+    sources_reducer.raw_list = data
+    sources_reducer.data_column_name = parameter_diction.get("sources_index_name")
+    sources_reducer.current_dict_abspath = parameter_diction.get("sources_path")
+    sources_reducer.current_data_abspath = parameter_diction.get("data_path")
+    sources_reducer.has_header = parameter_diction.get("has_header")
+    sources_reducer.save_file_path = parameter_diction.get("save_file_path")
     try:
-        keywords_reducer.main()
+        sources_reducer.main()
         if parameter_diction.get("save_file_path"):
-            if keywords_reducer.trash_list:
+            if sources_reducer.trash_list:
                 if parameter_diction.get("data_path"):
-                    filename = join(keywords_reducer.save_file_path, "sources_data_trash.txt")
-                    export_to_txt(data_list=keywords_reducer.trash_list, file_name=filename,
-                                  column_head=keywords_reducer.header)
-            if keywords_reducer.cleaned_list:
-                filename = join(keywords_reducer.save_file_path, "clean_data.txt")
-                export_to_txt(data_list=keywords_reducer.cleaned_list, file_name=filename,
-                              column_head=keywords_reducer.header)
+                    filename = join(sources_reducer.save_file_path, "sources_data_trash.txt")
+                    export_to_txt(data_list=sources_reducer.trash_list, file_name=filename,
+                                  column_head=sources_reducer.header)
+            if sources_reducer.cleaned_list:
+                filename = join(sources_reducer.save_file_path, "clean_data.txt")
+                export_to_txt(data_list=sources_reducer.cleaned_list, file_name=filename,
+                              column_head=sources_reducer.header)
         else:
-            return keywords_reducer.cleaned_list
+            return sources_reducer.cleaned_list, sources_reducer.error_list
     except:
         traceback.print_exc()
     return
@@ -225,6 +278,21 @@ def find_trash_data(data_path, save_file_path=u"D:\WorkSpace\Data",
                     has_header=True, keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
                     sources_path=ur"D:\WorkSpace\Data\trash_sources.txt",
                     min_char=4, max_char=600, max_symbol=5, ):
+    """
+    筛选噪声数据
+    :param data_path:
+    :param save_file_path:
+    :param solutions:
+    :param data_index_name:
+    :param sources_index_name:
+    :param has_header:
+    :param keyword_path:
+    :param sources_path:
+    :param min_char:
+    :param max_char:
+    :param max_symbol:
+    :return:
+    """
 
     if isinstance(solutions, list):
         test_classifier = solutions
@@ -262,6 +330,16 @@ def find_trash_data(data_path, save_file_path=u"D:\WorkSpace\Data",
 def rules_clean(raw_data, data_index_name=2, sources_index_name=3,
                 keyword_path=ur"D:\WorkSpace\Data\keywords.txt",
                 sources_path=ur"D:\WorkSpace\Data\trash_sources.txt", min_char=4):
+    """
+    一键去水
+    :param raw_data:
+    :param data_index_name:
+    :param sources_index_name:
+    :param keyword_path:
+    :param sources_path:
+    :param min_char:
+    :return:
+    """
     print "before dnr there's {0} rows in data".format(len(raw_data))
     raw_data = keywords_splitter(data=raw_data, data_path='', save_file_path='',
                                  data_index_name=data_index_name,

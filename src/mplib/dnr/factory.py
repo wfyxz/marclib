@@ -1,20 +1,12 @@
 # coding: utf-8
 # __author__: u"John"
 from __future__ import division
-from os import path
 from mplib.common.base_class import AttributeDict
-import re
+from mplib.common.unicode_tools import to_unicode
 from glob import glob
+from os import path
 import pandas as pd
-import os
-import jieba
-import numpy
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from pandas import DataFrame
-import io
-import csv
-import datetime
+import re
 
 
 # region 可复用基本类 可以得到文件名，文件拓展，还有一个加序号的方法
@@ -183,7 +175,7 @@ class KeywordsReducer(BaseReducer):
         self.count_list = [0] * len(self.keywords_list)
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = to_unicode(string[self.data_column_index])
             hit = False
             # for keywords in self.keywords_list:
             try:
@@ -338,7 +330,7 @@ class TagsReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = to_unicode(string[self.data_column_index])
             try:
                 self.tags_finder()
                 if self.current_result:
@@ -393,7 +385,7 @@ class NumbersReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = to_unicode(string[self.data_column_index])
             self.number_finder()
             try:
                 if self.current_result:
@@ -459,7 +451,7 @@ class AbnormalReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = to_unicode(string[self.data_column_index])
             self.abnormal_finder()
             try:
                 if self.current_result:
@@ -521,7 +513,7 @@ class SeriesReducer(BaseReducer):
         self.get_contents()
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = to_unicode(string[self.data_column_index])
             self.series_finder()
             try:
                 if self.current_result:
@@ -613,7 +605,7 @@ class SourcesReducer(BaseReducer):
         self.count_list = [0] * len(self.keywords_list)
         for index in range(len(self.raw_list)):
             string = self.raw_list[index]
-            self.current_string = string[self.data_column_index]
+            self.current_string = to_unicode(string[self.data_column_index])
             self.sources_finder()
             try:
                 if self.current_result:
