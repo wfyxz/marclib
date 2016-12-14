@@ -4,13 +4,13 @@ from mplib.common.settings import MYSQL_SETTINGS
 import MySQLdb
 
 
-def db_connect(MYSQL_SETTINGS):
-    connection = MySQLdb.Connect(**MYSQL_SETTINGS)
+def db_connect(settings=MYSQL_SETTINGS):
+    connection = MySQLdb.Connect(**settings)
     return connection
 
 
-def db_cursor(MYSQL_SETTINGS):
-    cursor = MySQLdb.Connect(**MYSQL_SETTINGS).cursor()
+def db_cursor(settings=MYSQL_SETTINGS):
+    cursor = MySQLdb.Connect(**settings).cursor()
     return cursor
 
 

@@ -1,3 +1,4 @@
+README
 setup.py
 src/mplib/__init__.py
 src/mplib.egg-info/PKG-INFO
@@ -10,6 +11,7 @@ src/mplib/IO/db/hive/__init__.py
 src/mplib/IO/db/hive/connector.py
 src/mplib/IO/db/mysql/__init__.py
 src/mplib/IO/db/mysql/connector.py
+src/mplib/IO/db/postgresql/__init__.py
 src/mplib/IO/db/redis/__init__.py
 src/mplib/IO/file/__init__.py
 src/mplib/IO/file/texts.py
