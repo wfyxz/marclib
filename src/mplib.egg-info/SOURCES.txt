@@ -12,6 +12,7 @@ src/mplib/IO/db/mysql/__init__.py
 src/mplib/IO/db/mysql/connector.py
 src/mplib/IO/db/redis/__init__.py
 src/mplib/IO/file/__init__.py
+src/mplib/IO/file/texts.py
 src/mplib/IO/file/binary/__init__.py
 src/mplib/IO/file/binary/pickle_helper.py
 src/mplib/common/__init__.py
